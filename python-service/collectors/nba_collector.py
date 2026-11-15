@@ -178,14 +178,20 @@ def upsert_games(cur: psycopg.Cursor, games: list[dict]) -> None:
     # DO UPDATE so postponed/rescheduled games get their new date
     cur.executemany(
         """
-        INSERT INTO nba_game (id, game_date, season, home_team_id, away_team_id)
-        VALUES (%(id)s, %(game_date)s, %(season)s, %(home_team_id)s, %(away_team_id)s)
+        INSERT INTO nba_game (id, game_date, season, home_team_id, away_team_id, home_score, away_score)
+        VALUES (
+            %(id)s, %(game_date)s, %(season)s, %(home_team_id)s, %(away_team_id)s,
+            %(home_score)s, %(away_score)s
+        )
         ON CONFLICT (id) DO UPDATE SET
             game_date = EXCLUDED.game_date,
             home_team_id = EXCLUDED.home_team_id,
-            away_team_id = EXCLUDED.away_team_id
+            away_team_id = EXCLUDED.away_team_id,
+            -- schedule rows have no score, don't wipe one that box scores already set
+            home_score = COALESCE(EXCLUDED.home_score, nba_game.home_score),
+            away_score = COALESCE(EXCLUDED.away_score, nba_game.away_score)
         """,
-        games,
+        [{"home_score": None, "away_score": None, **g} for g in games],
     )
 
 
@@ -197,9 +203,14 @@ def upsert_box_scores(cur: psycopg.Cursor, rows: list[dict]) -> None:
             "season": r["season"],
             "home_team_id": r["home_team_id"],
             "away_team_id": r["away_team_id"],
+            "home_score": 0,
+            "away_score": 0,
         }
         for r in rows
     }
+    # final score = sum of the team's player points (DNP rows are skipped but they have 0 points anyway)
+    for r in rows:
+        games[r["game_id"]]["home_score" if r["is_home"] else "away_score"] += r["pts"]
     upsert_games(cur, list(games.values()))
 
     # rows are sorted by date, so the last one wins = player's latest team

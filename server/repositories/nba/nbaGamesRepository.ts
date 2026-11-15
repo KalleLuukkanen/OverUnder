@@ -10,11 +10,13 @@ const currentSeason = () => {
 };
 
 // columns + joins shared by every query: game info with both teams' abbreviations and names
+// home_score and away_score are null for games not played yet
 const gamesWithTeams = () => sql`
     SELECT
         g.id, g.game_date, g.season,
         g.home_team_id, home.abbreviation AS home_team, home.name AS home_team_name,
-        g.away_team_id, away.abbreviation AS away_team, away.name AS away_team_name
+        g.away_team_id, away.abbreviation AS away_team, away.name AS away_team_name,
+        g.home_score, g.away_score
     FROM nba_game g
     JOIN nba_team home ON home.id = g.home_team_id
     JOIN nba_team away ON away.id = g.away_team_id

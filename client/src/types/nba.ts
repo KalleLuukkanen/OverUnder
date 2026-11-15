@@ -17,6 +17,8 @@ export type NbaGame = {
     away_team_id: number;
     away_team: string;
     away_team_name: string;
+    home_score: number | null;   // null until the game is played
+    away_score: number | null;
 };
 
 export type NbaPlayer = {
