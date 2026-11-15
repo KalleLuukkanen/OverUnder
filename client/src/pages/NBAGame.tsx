@@ -5,6 +5,7 @@ import type { NbaGame } from "../types/nba";
 import { ApiError } from "../api/apiClient";
 import Loading from "../components/Loading";
 import NBAGameTeam from "../features/sports/nba/NBAGameTeam";
+import HitRate from "../features/sports/nba/HitRate";
 
 function NBAGame() {
 
@@ -46,6 +47,7 @@ function NBAGame() {
                 <div className="grid grid-cols-2 gap-4">
                     <NBAGameTeam team_id={game.away_team_id} opp_team_id={game.home_team_id} opp_team={game.home_team} />
                     <NBAGameTeam team_id={game.home_team_id} opp_team_id={game.away_team_id} opp_team={game.away_team} />
+                    <HitRate team1_id={game.home_team_id} team2_id={game.away_team_id} />
                 </div>
             </div>
         )

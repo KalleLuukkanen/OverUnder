@@ -15,8 +15,8 @@ function NBAGameTeam({ team_id, opp_team_id, opp_team }: { team_id: number, opp_
     const [pastGames, setPastGames] = useState<NbaGame[]>([]);
     const [roster, setRoster] = useState<NbaRosterPlayer[]>([]);
 
-    const [showingGames, setShowingGames] = useState(true);
-    const [showingRoster, setShowingRoster] = useState(true);
+    const [showingGames, setShowingGames] = useState(false);
+    const [showingRoster, setShowingRoster] = useState(false);
 
     const [playersShowing, setPlayersShowing] = useState<number[]>([]);
     const togglePlayersShowing = (player_id: number) => {
