@@ -10,6 +10,7 @@ export type NbaTeam = {
 export type NbaGame = {
     id: string;
     game_date: string;
+    start_time: string | null;   // ISO time in UTC, null if the dataset has no time yet
     season: string;
     home_team_id: number;
     home_team: string;

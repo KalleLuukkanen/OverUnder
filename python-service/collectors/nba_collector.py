@@ -16,7 +16,8 @@ import csv
 import os
 from collections.abc import Iterator
 from contextlib import contextmanager
-from datetime import date
+from datetime import date, datetime
+from zoneinfo import ZoneInfo
 
 import kagglehub
 import psycopg
@@ -24,6 +25,7 @@ import psycopg
 from collectors.nba_teams import TEAMS
 
 DATASET = "eoinamoore/historical-nba-data-and-player-box-scores"
+EASTERN = ZoneInfo("America/New_York")  # dataset times are US Eastern without an offset
 
 # nba.com game ids look like 0022600226: [2] = game type, [3:5] = season start year
 # 1 = preseason, 2 = regular season, 3 = All-Star, 4 = playoffs, 5 = play-in, 6 = NBA Cup final
@@ -95,6 +97,14 @@ def parse_minutes(value: str) -> float:
         mins, secs = value.split(":", 1)
         return round(int(mins) + int(secs or 0) / 60, 2)
     return round(float(value), 2)
+
+
+def start_time(value: str) -> datetime | None:
+    """'2027-03-17 19:30:00' (US Eastern) -> aware datetime, saved as UTC by Postgres. Date only -> None."""
+    value = value.strip()
+    if len(value) < 16:
+        return None
+    return datetime.fromisoformat(value[:19]).replace(tzinfo=EASTERN)
 
 
 def to_int(value: str) -> int:
@@ -212,6 +222,7 @@ def read_box_scores(seasons: set[str]) -> tuple[list[dict], list[dict]]:
                 "player_name": f"{r['firstName']} {r['lastName']}".strip(),
                 "game_id": game_id,
                 "game_date": date.fromisoformat(r["gameDateTimeEst"][:10]),
+                "start_time": start_time(r["gameDateTimeEst"]),
                 "season": game_season(game_id),
                 "team_id": team_id,
                 "opponent_id": opp_id,
@@ -264,6 +275,7 @@ def read_schedule(season: str) -> list[dict]:
         games.append({
             "id": game_id,
             "game_date": date.fromisoformat(r["gameDateTimeEst"][:10]),
+            "start_time": start_time(r["gameDateTimeEst"]),
             "season": season,
             "home_team_id": home,
             "away_team_id": away,
@@ -289,13 +301,14 @@ def upsert_games(cur: psycopg.Cursor, games: list[dict]) -> None:
     # DO UPDATE so postponed/rescheduled games get their new date
     cur.executemany(
         """
-        INSERT INTO nba_game (id, game_date, season, home_team_id, away_team_id, home_score, away_score)
+        INSERT INTO nba_game (id, game_date, start_time, season, home_team_id, away_team_id, home_score, away_score)
         VALUES (
-            %(id)s, %(game_date)s, %(season)s, %(home_team_id)s, %(away_team_id)s,
+            %(id)s, %(game_date)s, %(start_time)s, %(season)s, %(home_team_id)s, %(away_team_id)s,
             %(home_score)s, %(away_score)s
         )
         ON CONFLICT (id) DO UPDATE SET
             game_date = EXCLUDED.game_date,
+            start_time = COALESCE(EXCLUDED.start_time, nba_game.start_time),
             home_team_id = EXCLUDED.home_team_id,
             away_team_id = EXCLUDED.away_team_id,
             -- schedule rows have no score, don't wipe one that box scores already set
@@ -311,6 +324,7 @@ def upsert_box_scores(cur: psycopg.Cursor, rows: list[dict]) -> None:
         r["game_id"]: {
             "id": r["game_id"],
             "game_date": r["game_date"],
+            "start_time": r["start_time"],
             "season": r["season"],
             "home_team_id": r["home_team_id"],
             "away_team_id": r["away_team_id"],

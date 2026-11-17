@@ -13,7 +13,7 @@ const currentSeason = () => {
 // home_score and away_score are null for games not played yet
 const gamesWithTeams = () => sql`
     SELECT
-        g.id, g.game_date, g.season,
+        g.id, g.game_date, g.start_time, g.season,
         g.home_team_id, home.abbreviation AS home_team, home.name AS home_team_name,
         g.away_team_id, away.abbreviation AS away_team, away.name AS away_team_name,
         g.home_score, g.away_score
@@ -37,7 +37,7 @@ const getUpcomingGames = async () => {
     const result = await sql`
         ${gamesWithTeams()}
         WHERE g.game_date BETWEEN current_date AND current_date + 1
-        ORDER BY g.game_date;
+        ORDER BY g.game_date, g.start_time;
     `;
     return result;
 };
@@ -56,7 +56,7 @@ const getSeasonAllGames = async (season: string) => {
     const result = await sql`
         ${gamesWithTeams()}
         WHERE g.season = ${season}
-        ORDER BY g.game_date;
+        ORDER BY g.game_date, g.start_time;
     `;
     return result;
 };
@@ -66,7 +66,7 @@ const getCurrentSeasonPastGames = async () => {
     const result = await sql`
         ${gamesWithTeams()}
         WHERE g.season = ${currentSeason()} AND g.game_date < current_date
-        ORDER BY g.game_date DESC;
+        ORDER BY g.game_date DESC, g.start_time DESC NULLS LAST;
     `;
     return result;
 };
@@ -76,7 +76,7 @@ const getCurrentSeasonUpcomingGames = async () => {
     const result = await sql`
         ${gamesWithTeams()}
         WHERE g.season = ${currentSeason()} AND g.game_date >= current_date
-        ORDER BY g.game_date;
+        ORDER BY g.game_date, g.start_time;
     `;
     return result;
 };
@@ -86,7 +86,7 @@ const getTeamsGames = async (team_id: number, season: string) => {
     const result = await sql`
         ${gamesWithTeams()}
         WHERE g.season = ${season} AND ${team_id} IN (g.home_team_id, g.away_team_id)
-        ORDER BY g.game_date;
+        ORDER BY g.game_date, g.start_time;
     `;
     return result;
 };
@@ -97,7 +97,7 @@ const getTeamsPastGames = async (team_id: number) => {
         ${gamesWithTeams()}
         WHERE g.season = ${currentSeason()} AND g.game_date < current_date
             AND ${team_id} IN (g.home_team_id, g.away_team_id)
-        ORDER BY g.game_date DESC;
+        ORDER BY g.game_date DESC, g.start_time DESC NULLS LAST;
     `;
     return result;
 };
@@ -108,7 +108,7 @@ const getTeamsUpcomingGames = async (team_id: number) => {
         ${gamesWithTeams()}
         WHERE g.season = ${currentSeason()} AND g.game_date >= current_date
             AND ${team_id} IN (g.home_team_id, g.away_team_id)
-        ORDER BY g.game_date;
+        ORDER BY g.game_date, g.start_time;
     `;
     return result;
 };
@@ -118,7 +118,7 @@ const getTeamsNextGame = async (team_id: number) => {
     const result = await sql`
         ${gamesWithTeams()}
         WHERE g.game_date >= current_date AND ${team_id} IN (g.home_team_id, g.away_team_id)
-        ORDER BY g.game_date
+        ORDER BY g.game_date, g.start_time
         LIMIT 1;
     `;
     return result[0];
@@ -131,7 +131,7 @@ const getHeadToHeadGames = async (team_id: number, opponent_id: number) => {
         WHERE g.game_date < current_date
             AND ((g.home_team_id = ${team_id} AND g.away_team_id = ${opponent_id})
               OR (g.home_team_id = ${opponent_id} AND g.away_team_id = ${team_id}))
-        ORDER BY g.game_date DESC;
+        ORDER BY g.game_date DESC, g.start_time DESC NULLS LAST;
     `;
     return result;
 };

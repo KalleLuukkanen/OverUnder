@@ -1,6 +1,6 @@
 import type { NbaGame } from "../../../types/nba";
 import { Link } from "react-router-dom";
-import { isScoreMissing } from "../../../utils/nbaGame";
+import { isScoreMissing, gameDateTime } from "../../../utils/nbaGame";
 
 // team_id is optional: when given, the card also shows that team's W/L
 // bg is the card's background class, grey by default
@@ -34,7 +34,7 @@ function NBAGameCard({ game, team_id, bg = "bg-gray-300" }: { game: NbaGame, tea
             <div className={`flex flex-col shadow rounded ${bg} p-2 space-y-2 w-64`}>
                 <p>{game.away_team} @ {game.home_team} </p>
                 {scoreMissing && <p className="text-gray-600">Score not available yet</p>}
-                <p>{new Date(game.game_date).toLocaleDateString("fi-FI")}</p>
+                <p>{gameDateTime(game)}</p>
                 <Link className="ml-auto mt-2 text-blue-500 hover:underline text-lg" to={`/nba/game/${game.id}`}>See more</Link>
             </div>
         )
@@ -57,7 +57,7 @@ function NBAGameCard({ game, team_id, bg = "bg-gray-300" }: { game: NbaGame, tea
                     <p className={`ml-auto ${team_result() === "W" ? "text-green-500" : "text-red-500"}`}>{team_result()}</p>
                 </div>
                 <p>{game.away_score} - {game.home_score}</p>
-                <p>{new Date(game.game_date).toLocaleDateString("fi-FI")}</p>
+                <p>{gameDateTime(game)}</p>
                 <Link className="ml-auto mt-2 text-blue-500 hover:underline text-lg" to={`/nba/game/${game.id}`}>See more</Link>
             </div>
         )

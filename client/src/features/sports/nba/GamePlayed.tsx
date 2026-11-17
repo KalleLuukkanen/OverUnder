@@ -2,6 +2,7 @@ import { type NbaBoxScore, type NbaGame } from "../../../types/nba";
 import { getGameBoxScore } from "../../../api/nba/nbaPlayerGamesApi";
 import { useState, useEffect } from "react";
 import BoxScore from "./BoxScore";
+import { gameDateTime } from "../../../utils/nbaGame";
 
 function GamePlayed({ game }: { game: NbaGame }) {
 
@@ -33,7 +34,7 @@ function GamePlayed({ game }: { game: NbaGame }) {
     if (!statsAvailable || game.home_score === null || game.away_score === null || !boxScore) {
         return (
             <div className="flex flex-col space-y-2 p-4">
-                <span className="text-3xl font-bold">{game.away_team} @ {game.home_team} - {new Date(game.game_date).toLocaleDateString("fi-FI")}</span>
+                <span className="text-3xl font-bold">{game.away_team} @ {game.home_team} - {gameDateTime(game)}</span>
                 <p className="text-2xl">Stats not yet available for this game</p>
             </div>
         )

@@ -19,4 +19,14 @@ const isPlayed = (game: NbaGame) =>
 const isScoreMissing = (game: NbaGame) =>
     game.home_score === null && isPlayed(game);
 
-export { usTodayKey, usDayKey, isPlayed, isScoreMissing };
+// date and tip-off time in the viewer's own time zone, e.g. '18.11.2026 klo 2.30'
+// without a start time only the date is known, shown as the US date
+const gameDateTime = (game: NbaGame) => {
+    if (!game.start_time) return new Date(game.game_date).toLocaleDateString("fi-FI");
+    const start = new Date(game.start_time);
+    const day = start.toLocaleDateString("fi-FI");
+    const time = start.toLocaleTimeString("fi-FI", { hour: "2-digit", minute: "2-digit" });
+    return `${day} ${time}`;
+};
+
+export { usTodayKey, usDayKey, isPlayed, isScoreMissing, gameDateTime };
