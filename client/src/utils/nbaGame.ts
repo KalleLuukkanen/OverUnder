@@ -41,4 +41,8 @@ const finalLabel = (periods: number | null) => {
     return ot ? `Final/${ot}` : "Final";
 };
 
-export { usTodayKey, usDayKey, isPlayed, isScoreMissing, gameDateTime, overtimeLabel, finalLabel };
+// 'W-L' record, e.g. '7-4', empty when unknown
+const recordLabel = (wins: number | null | undefined, losses: number | null | undefined) =>
+    wins === null || wins === undefined || losses === null || losses === undefined ? "" : `${wins}-${losses}`;
+
+export { usTodayKey, usDayKey, isPlayed, isScoreMissing, gameDateTime, overtimeLabel, finalLabel, recordLabel };

@@ -1,5 +1,5 @@
 import { get, post } from "../apiClient";
-import type { NbaGame } from "../../types/nba";
+import type { NbaGame, NbaTeamGameStats } from "../../types/nba";
 
 // get one game based on id
 const getOne = (gameId: string) =>
@@ -45,7 +45,12 @@ const getTeamsNextGame = (teamId: number) =>
 const getHeadToHeadGames = (teamId: number, opponentId: number) =>
     get<NbaGame[]>(`/api/nba/teams/${teamId}/vs/${opponentId}/games`);
 
+// quarter scores, team stats and records of a played game, [] if not synced yet
+const getGameTeamStats = (gameId: string) =>
+    get<NbaTeamGameStats[]>(`/api/nba/games/${gameId}/team-stats`);
+
 export {
+    getGameTeamStats,
     getOne,
     getUpcomingGames,
     getGamesByDate,

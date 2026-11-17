@@ -5,6 +5,49 @@ export type NbaTeam = {
     id: number;
     abbreviation: string;
     name: string;
+    wins?: number | null;     // current regular season record, null before the first game
+    losses?: number | null;
+};
+
+// one team's line in a played game: quarter scores, team stats, record after the game
+export type NbaTeamGameStats = {
+    game_id: string;
+    team_id: number;
+    team: string;
+    team_name: string;
+    is_home: boolean;
+    q1: number | null;
+    q2: number | null;
+    q3: number | null;
+    q4: number | null;
+    ot1: number | null;
+    ot2: number | null;
+    ot_all: number | null;    // every overtime together
+    season_wins: number | null;
+    season_losses: number | null;
+    fgm: number | null;
+    fga: number | null;
+    fg3m: number | null;
+    fg3a: number | null;
+    ftm: number | null;
+    fta: number | null;
+    reb_off: number | null;
+    reb_def: number | null;
+    reb: number | null;
+    ast: number | null;
+    stl: number | null;
+    blk: number | null;
+    tov: number | null;
+    fouls: number | null;
+    points_paint: number | null;
+    points_fast_break: number | null;
+    points_second_chance: number | null;
+    points_off_turnovers: number | null;
+    points_bench: number | null;
+    biggest_lead: number | null;
+    biggest_run: number | null;
+    lead_changes: number | null;
+    times_tied: number | null;
 };
 
 export type NbaGame = {

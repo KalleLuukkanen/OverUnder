@@ -256,6 +256,48 @@ def read_box_scores(seasons: set[str]) -> tuple[list[dict], list[dict]]:
     return rows, season_totals
 
 
+# TeamStatistics.csv column -> nba_team_game column
+TEAM_GAME_COLUMNS = {
+    "q1Points": "q1", "q2Points": "q2", "q3Points": "q3", "q4Points": "q4",
+    "ot1Points": "ot1", "ot2Points": "ot2", "otAllPoints": "ot_all",
+    "seasonWins": "season_wins", "seasonLosses": "season_losses",
+    "fieldGoalsMade": "fgm", "fieldGoalsAttempted": "fga",
+    "threePointersMade": "fg3m", "threePointersAttempted": "fg3a",
+    "freeThrowsMade": "ftm", "freeThrowsAttempted": "fta",
+    "reboundsOffensive": "reb_off", "reboundsDefensive": "reb_def", "reboundsTotal": "reb",
+    "assists": "ast", "steals": "stl", "blocks": "blk", "turnovers": "tov", "foulsPersonal": "fouls",
+    "pointsInThePaint": "points_paint", "pointsFastBreak": "points_fast_break",
+    "pointsSecondChance": "points_second_chance", "pointsFromTurnovers": "points_off_turnovers",
+    "benchPoints": "points_bench", "biggestLead": "biggest_lead", "biggestScoringRun": "biggest_run",
+    "leadChanges": "lead_changes", "timesTied": "times_tied",
+}
+
+
+def opt_count(value: str) -> int | None:
+    """Like opt_int but 0 is a real value (0 OT points, 0 lead changes): '' -> None, '0' -> 0."""
+    try:
+        return int(float(value))
+    except ValueError:
+        return None
+
+
+def read_team_stats(seasons: set[str]) -> list[dict]:
+    """Quarter scores, team totals and season records of the given seasons' played games."""
+    rows = []
+    with download("TeamStatistics.csv") as path, open(path, newline="", encoding="utf-8") as fh:
+        for r in csv.DictReader(fh):
+            game_id = normalize_game_id(r["gameId"])
+            team_id = opt_count(r["teamId"])
+            if not wanted(game_id, seasons) or team_id not in TEAMS:
+                continue
+            row = {"game_id": game_id, "team_id": team_id}
+            for src, col in TEAM_GAME_COLUMNS.items():
+                row[col] = opt_count(r.get(src, ""))
+            rows.append(row)
+    print(f"  {len(rows)} team game lines")
+    return rows
+
+
 def read_schedule(season: str) -> list[dict]:
     """Upcoming + played games of a season. The dataset only publishes the current season's file."""
     start = int(season[:4]) % 100
@@ -422,10 +464,29 @@ def update_player_info(cur: psycopg.Cursor, players: list[dict]) -> None:
     print("  updated player bios")
 
 
+def upsert_team_stats(cur: psycopg.Cursor, rows: list[dict]) -> None:
+    # only games that exist in nba_game (schedule + box scores), the foreign key would reject others
+    cur.execute("SELECT id FROM nba_game")
+    known = {r[0] for r in cur.fetchall()}
+    rows = [r for r in rows if r["game_id"] in known]
+    cols = ["game_id", "team_id", *TEAM_GAME_COLUMNS.values()]
+    updates = ", ".join(f"{c} = EXCLUDED.{c}" for c in TEAM_GAME_COLUMNS.values())
+    cur.executemany(
+        f"""
+        INSERT INTO nba_team_game ({", ".join(cols)})
+        VALUES ({", ".join(f"%({c})s" for c in cols)})
+        ON CONFLICT (game_id, team_id) DO UPDATE SET {updates}
+        """,
+        rows,
+    )
+    print(f"  saved {len(rows)} team game lines")
+
+
 def sync(seasons: list[str]) -> None:
     season_set = set(seasons)
     box_scores, season_totals = read_box_scores(season_set)
     players = read_players()
+    team_stats = read_team_stats(season_set)
     schedule = [g for s in sorted(season_set) for g in read_schedule(s)]
 
     with psycopg.connect() as conn:  # connection params from PG* env vars
@@ -435,6 +496,7 @@ def sync(seasons: list[str]) -> None:
             upsert_box_scores(cur, box_scores)
             upsert_season_totals(cur, season_totals)
             update_player_info(cur, players)
+            upsert_team_stats(cur, team_stats)
         conn.commit()
 
 

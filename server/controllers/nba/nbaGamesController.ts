@@ -113,7 +113,18 @@ const getHeadToHeadGames = async (req: Request, res: Response) => {
     return res.status(200).json(games);
 };
 
+// quarter scores, team stats and records of a played game, [] if not synced yet
+const getGameTeamStats = async (req: Request, res: Response) => {
+    const game_id = req.params.gameId;
+    if (!game_id) {
+        return res.status(400).json({ error: "Missing game id" });
+    }
+    const stats = await nbaGamesRepository.getGameTeamStats(game_id);
+    return res.status(200).json(stats);
+};
+
 export {
+    getGameTeamStats,
     getOne,
     getUpcomingGames,
     getGamesByDate,

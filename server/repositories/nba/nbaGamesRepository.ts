@@ -136,7 +136,21 @@ const getHeadToHeadGames = async (team_id: number, opponent_id: number) => {
     return result;
 };
 
+// quarter scores, team stats and season record after the game for both teams, away team first
+const getGameTeamStats = async (game_id: string) => {
+    const result = await sql`
+        SELECT tg.*, t.abbreviation AS team, t.name AS team_name, (tg.team_id = g.home_team_id) AS is_home
+        FROM nba_team_game tg
+        JOIN nba_game g ON g.id = tg.game_id
+        JOIN nba_team t ON t.id = tg.team_id
+        WHERE tg.game_id = ${game_id}
+        ORDER BY is_home;
+    `;
+    return result;
+};
+
 export {
+    getGameTeamStats,
     currentSeason,
     getOne,
     getUpcomingGames,

@@ -60,6 +60,7 @@ app.get("/api/nba/games/season/current/past", nbaGamesController.getCurrentSeaso
 app.get("/api/nba/games/season/current/upcoming", nbaGamesController.getCurrentSeasonUpcomingGames);
 app.get("/api/nba/games/:gameId", nbaGamesController.getOne);
 app.get("/api/nba/games/:gameId/box-score", nbaPlayerGamesController.getGameBoxScore);
+app.get("/api/nba/games/:gameId/team-stats", nbaGamesController.getGameTeamStats);
 
 // teams
 app.get("/api/nba/teams", nbaTeamsController.getAll);

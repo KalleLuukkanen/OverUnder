@@ -13,12 +13,21 @@ const getAll = async () => {
     return result;
 };
 
-// get one team based on id
+// get one team based on id, with its current regular season record (wins/losses null before its first game)
+// record = from the team's latest regular season game this season (game type '2' in the id)
 const getOne = async (team_id: number) => {
     const result = await sql`
-        SELECT id, abbreviation, name
-        FROM nba_team
-        WHERE id = ${team_id};
+        SELECT t.id, t.abbreviation, t.name, r.season_wins AS wins, r.season_losses AS losses
+        FROM nba_team t
+        LEFT JOIN LATERAL (
+            SELECT tg.season_wins, tg.season_losses
+            FROM nba_team_game tg
+            JOIN nba_game g ON g.id = tg.game_id
+            WHERE tg.team_id = t.id AND g.season = ${currentSeason()} AND substring(g.id, 3, 1) = '2'
+            ORDER BY g.game_date DESC, g.start_time DESC NULLS LAST
+            LIMIT 1
+        ) r ON true
+        WHERE t.id = ${team_id};
     `;
     return result[0];
 };
