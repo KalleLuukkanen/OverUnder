@@ -6,6 +6,7 @@ import Layout from "./Layout";
 import NotFoundPage from "./pages/NotFoundPage";
 import NBAPage from "./pages/NBAPage";
 import NBAGame from "./pages/NBAGame";
+import NBAPlayer from "./pages/NBAPlayer";
 
 //protected routes inside RequireAuth
 export default function App() {
@@ -20,7 +21,8 @@ export default function App() {
         />
         <Route path="/nba">
           <Route index element={<NBAPage />} />
-          <Route path=":gameId" element={<NBAGame />} />
+          <Route path="game/:gameId" element={<NBAGame />} />
+          <Route path="player/:playerId" element={<NBAPlayer />} />
         </Route>
         <Route
           path="/auth"
