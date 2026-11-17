@@ -69,7 +69,7 @@ function NBAGameTeam({ team_id, opp_team_id, opp_team }: { team_id: number, opp_
                     <ul className="flex flex-wrap gap-2">
                         {pastGames.map((g) => (
                             <li key={g.id}>
-                                <NBAGameCard game={g} team_id={team_id} />
+                                <NBAGameCard game={g} team_id={team_id} bg="bg-white" />
                             </li>
                         ))}
                     </ul>

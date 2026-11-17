@@ -1,7 +1,11 @@
 import type { NbaGame } from "../../../types/nba";
+import { isScoreMissing } from "../../../utils/nbaGame";
 
 // team_id is optional: when given, the card also shows that team's W/L
-function NBAGameCard({ game, team_id }: { game: NbaGame, team_id?: number }) {
+// bg is the card's background class, grey by default
+function NBAGameCard({ game, team_id, bg = "bg-gray-300" }: { game: NbaGame, team_id?: number, bg?: string }) {
+
+    const scoreMissing = isScoreMissing(game);
 
     const team_result = () => {
         if (team_id === undefined || game.home_score === null || game.away_score === null) return "";
@@ -26,15 +30,16 @@ function NBAGameCard({ game, team_id }: { game: NbaGame, team_id?: number }) {
 
     if (game.home_score === null || game.away_score === null) {
         return (
-            <div className="flex flex-col shadow rounded bg-gray-300 p-2 space-y-2 w-64">
+            <div className={`flex flex-col shadow rounded ${bg} p-2 space-y-2 w-64`}>
                 <p>{game.away_team} @ {game.home_team} </p>
+                {scoreMissing && <p className="text-gray-600">Score not available yet</p>}
                 <p>{new Date(game.game_date).toLocaleDateString("fi-FI")}</p>
                 <a className="ml-auto mt-2 text-blue-500 hover:underline text-lg" href={`/nba/${game.id}`}>See more</a>
             </div>
         )
     } else {
         return (
-            <div className="flex flex-col shadow rounded bg-white p-2 space-y-1 w-64">
+            <div className={`flex flex-col shadow rounded ${bg} p-2 space-y-1 w-64`}>
                 <div className="flex">
                     {game.home_score > game.away_score ?
                         <span className="flex space-x-1">

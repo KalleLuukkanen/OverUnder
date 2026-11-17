@@ -4,7 +4,10 @@ function LeagueInfo({ league }: { league: string }) {
 
     if (league === "NBA") {
         return (
-            <NBAInfo />
+            <>
+                <span className="text-xl">Upcoming games:</span>
+                <NBAInfo />
+            </>
         )
     } else {
         return (

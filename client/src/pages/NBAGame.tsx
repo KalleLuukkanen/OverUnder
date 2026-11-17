@@ -6,6 +6,8 @@ import { ApiError } from "../api/apiClient";
 import Loading from "../components/Loading";
 import NBAGameTeam from "../features/sports/nba/NBAGameTeam";
 import HitRate from "../features/sports/nba/HitRate";
+import GamePlayed from "../features/sports/nba/GamePlayed";
+import { isPlayed } from "../utils/nbaGame";
 
 function NBAGame() {
 
@@ -40,7 +42,8 @@ function NBAGame() {
     if (loading) return <Loading />;
     if (!game) return;
 
-    if (game.home_score === null) {
+    // upcoming view only for games not played yet, finished games without stats are handled in GamePlayed
+    if (!isPlayed(game)) {
         return (
             <div className="flex flex-col bg-gray-300 p-2 rounded">
                 <span className="text-3xl font-bold">{game.away_team} @ {game.home_team} - {new Date(game.game_date).toLocaleDateString("fi-FI")}</span>
@@ -51,7 +54,13 @@ function NBAGame() {
                 </div>
             </div>
         )
-    } else { }
+    } else {
+        return (
+            <div className="flex flex-col bg-gray-300 p-2 rounded">
+                <GamePlayed game={game} />
+            </div>
+        )
+    }
 
 }
 
