@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ChevronRight, ChevronDown } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 import LeagueInfo from "./LeagueInfo";
 
 function SportInfo({ leagues }: { leagues: string[] }) {
@@ -13,17 +13,19 @@ function SportInfo({ leagues }: { leagues: string[] }) {
     };
 
     return (
-        <ul className="flex flex-col space-y-4 p-4">
+        <ul className="flex flex-col gap-3">
             {leagues.map((l) => (
-                <li key={l}>
+                <li key={l} className="bg-zinc-900 border border-zinc-800 rounded-xl">
                     <button
-                        className="text-xl underline cursor-pointer flex items-center font-semibold"
+                        className="flex items-center justify-between w-full px-4 py-3 cursor-pointer text-lg font-semibold rounded-xl hover:bg-zinc-800/50"
+                        type="button"
                         onClick={() => toggleShowing(l)}
                     >
-                        {l} {openLeagues.includes(l) ? <ChevronDown /> : <ChevronRight />}
+                        {l}
+                        <ChevronDown size={20} className={`text-zinc-500 transition-transform ${openLeagues.includes(l) ? "" : "-rotate-90"}`} />
                     </button>
                     {openLeagues.includes(l) &&
-                        <div className="p-4">
+                        <div className="px-4 pb-4">
                             <LeagueInfo league={l} />
                         </div>
                     }

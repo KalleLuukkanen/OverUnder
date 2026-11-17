@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import type { NbaTeam, NbaGame, NbaRosterPlayer } from "../../../types/nba";
 import { ApiError } from "../../../api/apiClient";
 import NBAGameCard from "./NBAGameCard";
-import { ChevronDown, ChevronRight } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 import NBAPlayerBrief from "./NBAPlayerBrief";
 
 function NBAGameTeam({ team_id, opp_team_id, opp_team }: { team_id: number, opp_team_id: number, opp_team: string }) {
@@ -55,39 +55,62 @@ function NBAGameTeam({ team_id, opp_team_id, opp_team }: { team_id: number, opp_
         return () => { cancelled = true };
     }, [team_id]);
 
-    if (loading) return <p className="text-2xl">Loading team...</p>;
+    if (loading) return <p className="text-zinc-400 p-4">Loading team...</p>;
     if (!team) return;
 
+    // rotating chevron used by the section toggles
+    const chevron = (open: boolean, size = 18) =>
+        <ChevronDown size={size} className={`text-zinc-500 transition-transform ${open ? "" : "-rotate-90"}`} />;
+
     return (
-        <div className="flex flex-col space-y-4 mt-6">
-            <span className="text-2xl underline">{team.name}</span>
-            <div className="flex flex-col space-y-2">
-                <button className="text-xl flex items-center cursor-pointer" type="button" onClick={() => setShowingGames(!showingGames)}>
-                    Last 5 games {showingGames ? <ChevronDown /> : <ChevronRight />}
+        <div className="flex flex-col gap-3 bg-zinc-900 border border-zinc-800 rounded-xl p-4">
+            <h2 className="text-xl font-semibold">{team.name}</h2>
+            <div className="flex flex-col gap-2">
+                <button
+                    className="flex items-center justify-between px-2 py-1.5 -mx-2 rounded-md cursor-pointer font-medium text-zinc-300 hover:bg-zinc-800/50"
+                    type="button"
+                    onClick={() => setShowingGames(!showingGames)}
+                >
+                    Last 5 games {chevron(showingGames)}
                 </button>
                 {showingGames &&
                     <ul className="flex flex-wrap gap-2">
                         {pastGames.map((g) => (
                             <li key={g.id}>
-                                <NBAGameCard game={g} team_id={team_id} bg="bg-white" />
+                                <NBAGameCard game={g} team_id={team_id} bg="bg-zinc-800/60" />
                             </li>
                         ))}
                     </ul>
                 }
             </div>
-            <div className="flex flex-col space-y-2">
-                <button className="text-xl flex items-center cursor-pointer" type="button" onClick={() => setShowingRoster(!showingRoster)}>
-                    Roster {showingRoster ? <ChevronDown /> : <ChevronRight />}
+            <div className="flex flex-col gap-2">
+                <button
+                    className="flex items-center justify-between px-2 py-1.5 -mx-2 rounded-md cursor-pointer font-medium text-zinc-300 hover:bg-zinc-800/50"
+                    type="button"
+                    onClick={() => setShowingRoster(!showingRoster)}
+                >
+                    Roster {chevron(showingRoster)}
                 </button>
                 {showingRoster &&
-                    <ul className="flex flex-col space-y-1">
+                    <ul className="flex flex-col gap-1">
                         {roster.map((p) => (
-                            <li key={p.id} className={`flex flex-col space-y-2 ${playersShowing.includes(p.id) ? "bg-white rounded p-1" : ""}`} >
-                                <div className="flex space-x-2 items-center cursor-pointer" onClick={() => togglePlayersShowing(p.id)}>
-                                    <p>{p.name}</p>
-                                    {playersShowing.includes(p.id) ? <ChevronDown /> : <ChevronRight />}
-                                </div>
-                                {playersShowing.includes(p.id) && <NBAPlayerBrief player={p} opp_team_id={opp_team_id} opp_team={opp_team} />}
+                            <li key={p.id} className={`flex flex-col rounded-lg ${playersShowing.includes(p.id) ? "bg-zinc-800/60 border border-zinc-700/60" : ""}`} >
+                                <button
+                                    className="flex items-center justify-between px-3 py-2 rounded-lg cursor-pointer text-left hover:bg-zinc-800/60"
+                                    type="button"
+                                    onClick={() => togglePlayersShowing(p.id)}
+                                >
+                                    <span>{p.name}</span>
+                                    <span className="flex items-center gap-3 text-sm text-zinc-400">
+                                        {p.games > 0 && <span className="tabular-nums">{p.pts} PPG</span>}
+                                        {chevron(playersShowing.includes(p.id), 16)}
+                                    </span>
+                                </button>
+                                {playersShowing.includes(p.id) &&
+                                    <div className="px-3 pb-3">
+                                        <NBAPlayerBrief player={p} opp_team_id={opp_team_id} opp_team={opp_team} />
+                                    </div>
+                                }
                             </li>
                         ))}
                     </ul>

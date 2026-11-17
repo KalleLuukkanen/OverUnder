@@ -1,1 +1,15 @@
 @import "tailwindcss";
+
+/* dark native controls (select dropdowns, number inputs, scrollbars) */
+:root {
+    color-scheme: dark;
+}
+
+body {
+    @apply bg-zinc-950 text-zinc-100 antialiased;
+}
+
+/* numbers in tables line up when every digit is the same width */
+table {
+    font-variant-numeric: tabular-nums;
+}

@@ -1,6 +1,7 @@
 import { getPlayersCareer } from "../../../api/nba/nbaPlayersApi";
 import { useState, useEffect } from "react";
 import { ChevronDown, ChevronUp } from "lucide-react";
+import table from "../../../styles/table";
 import type { NbaAverages, NbaPlayerCareer, NbaPlayerSeason } from "../../../types/nba";
 
 type SeasonType = "regular" | "playoffs";
@@ -42,17 +43,17 @@ const compareSeasons = (a: NbaPlayerSeason, b: NbaPlayerSeason, key: SortKey, as
 function AverageCells({ avg }: { avg: NbaAverages }) {
     return (
         <>
-            <td className="p-2">{avg.games}</td>
-            <td className="p-2">{avg.minutes === null ? "-" : avg.minutes.toFixed(1)}</td>
-            <td className="p-2 font-semibold">{avg.pts.toFixed(1)}</td>
-            <td className="p-2">{avg.reb.toFixed(1)}</td>
-            <td className="p-2">{avg.ast.toFixed(1)}</td>
-            <td className="p-2">{avg.stl.toFixed(1)}</td>
-            <td className="p-2">{avg.blk.toFixed(1)}</td>
-            <td className="p-2">{avg.tov.toFixed(1)}</td>
-            <td className="p-2">{pct(avg.fg_pct)}</td>
-            <td className="p-2">{pct(avg.fg3_pct)}</td>
-            <td className="p-2">{pct(avg.ft_pct)}</td>
+            <td className={table.td}>{avg.games}</td>
+            <td className={table.td}>{avg.minutes === null ? "-" : avg.minutes.toFixed(1)}</td>
+            <td className={`${table.td} font-semibold`}>{avg.pts.toFixed(1)}</td>
+            <td className={table.td}>{avg.reb.toFixed(1)}</td>
+            <td className={table.td}>{avg.ast.toFixed(1)}</td>
+            <td className={table.td}>{avg.stl.toFixed(1)}</td>
+            <td className={table.td}>{avg.blk.toFixed(1)}</td>
+            <td className={table.td}>{avg.tov.toFixed(1)}</td>
+            <td className={table.td}>{pct(avg.fg_pct)}</td>
+            <td className={table.td}>{pct(avg.fg3_pct)}</td>
+            <td className={table.td}>{pct(avg.ft_pct)}</td>
         </>
     )
 }
@@ -62,12 +63,12 @@ function SortHeader({ label, active, ascending, onClick, alignLeft = false }:
     { label: string, active: boolean, ascending: boolean, onClick: () => void, alignLeft?: boolean }) {
     return (
         <button
-            className={`flex items-center cursor-pointer ${alignLeft ? "" : "ml-auto"} ${active ? "text-blue-600" : ""}`}
+            className={table.sortButton(active, alignLeft)}
             type="button"
             onClick={onClick}
         >
             {label}
-            {active && (ascending ? <ChevronUp size={16} /> : <ChevronDown size={16} />)}
+            {active && (ascending ? <ChevronUp size={14} /> : <ChevronDown size={14} />)}
         </button>
     )
 }
@@ -110,19 +111,19 @@ function PlayerCareer({ player_id }: { player_id: number }) {
         }
     };
 
-    if (loading) return <p>Loading career stats...</p>
-    if (!career) return <p className="text-gray-500">Career stats not available</p>
+    if (loading) return <p className="text-zinc-400">Loading career stats...</p>
+    if (!career) return <p className="text-zinc-500">Career stats not available</p>
 
     const part = career[seasonType];
     const sorted = [...part.seasons].sort((a, b) => compareSeasons(a, b, sortKey, ascending));
 
     return (
-        <div className="flex flex-col space-y-3">
-            <div className="flex items-center gap-2">
+        <div className="flex flex-col gap-3">
+            <div className="flex w-fit p-1 gap-1 bg-zinc-900 border border-zinc-800 rounded-lg">
                 {(["regular", "playoffs"] as SeasonType[]).map((type) => (
                     <button
                         key={type}
-                        className={`px-2 py-1 rounded cursor-pointer ${seasonType === type ? "bg-blue-600 text-white" : "bg-gray-200"}`}
+                        className={`px-3 py-1 rounded-md text-sm cursor-pointer ${seasonType === type ? "bg-zinc-700 text-white" : "text-zinc-400 hover:text-zinc-200"}`}
                         type="button"
                         onClick={() => setSeasonType(type)}
                     >
@@ -131,12 +132,12 @@ function PlayerCareer({ player_id }: { player_id: number }) {
                 ))}
             </div>
             {part.career === null ?
-                <p className="text-gray-500">No {seasonType === "regular" ? "regular season" : "playoff"} games</p> :
-                <div className="overflow-x-auto">
-                    <table className="text-right bg-white rounded shadow">
+                <p className="text-zinc-500">No {seasonType === "regular" ? "regular season" : "playoff"} games</p> :
+                <div className={table.wrapper}>
+                    <table className={table.table}>
                         <thead>
-                            <tr className="border-b">
-                                <th className="text-left p-2">
+                            <tr className={table.headRow}>
+                                <th className={`${table.th} text-left`}>
                                     <SortHeader
                                         label="Season"
                                         active={sortKey === "season"}
@@ -145,9 +146,9 @@ function PlayerCareer({ player_id }: { player_id: number }) {
                                         alignLeft
                                     />
                                 </th>
-                                <th className="text-left p-2">Team</th>
+                                <th className={`${table.th} text-left`}>Team</th>
                                 {COLUMNS.map((c) => (
-                                    <th key={c.key} className="p-2">
+                                    <th key={c.key} className={table.th}>
                                         <SortHeader
                                             label={c.label}
                                             active={sortKey === c.key}
@@ -160,17 +161,17 @@ function PlayerCareer({ player_id }: { player_id: number }) {
                         </thead>
                         <tbody>
                             {sorted.map((s) => (
-                                <tr key={s.season} className="border-b">
-                                    <td className="text-left p-2 whitespace-nowrap">{s.season}</td>
-                                    <td className="text-left p-2 whitespace-nowrap">{s.teams}</td>
+                                <tr key={s.season} className={table.row}>
+                                    <td className={`${table.td} text-left`}>{s.season}</td>
+                                    <td className={`${table.td} text-left text-zinc-400`}>{s.teams}</td>
                                     <AverageCells avg={s} />
                                 </tr>
                             ))}
                         </tbody>
                         <tfoot>
-                            <tr className="font-semibold">
-                                <td className="text-left p-2">Career</td>
-                                <td className="text-left p-2">{part.career.seasons} seasons</td>
+                            <tr className={table.footRow}>
+                                <td className={`${table.td} text-left`}>Career</td>
+                                <td className={`${table.td} text-left text-zinc-400`}>{part.career.seasons} seasons</td>
                                 <AverageCells avg={part.career} />
                             </tr>
                         </tfoot>

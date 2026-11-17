@@ -63,11 +63,11 @@ function NBASeasonPastGames() {
         return () => { cancelled = true };
     }, []);
 
-    if (loading) return <p className="text-2xl">Loading past games...</p>;
-    if (weeks.length === 0) return <p className="text-gray-500">No games played yet this season</p>;
+    if (loading) return <p className="text-zinc-400">Loading past games...</p>;
+    if (weeks.length === 0) return <p className="text-zinc-500">No games played yet this season</p>;
 
     return (
-        <div className="flex flex-col space-y-3 mt-2 ml-2">
+        <div className="flex flex-col gap-2">
             {weeks.map((w, i) => (
                 <NBAPastGamesWeek key={w.weekStart} weekStart={w.weekStart} days={w.days} defaultOpen={i === 0} />
             ))}

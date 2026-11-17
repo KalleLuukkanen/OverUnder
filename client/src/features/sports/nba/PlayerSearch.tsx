@@ -2,6 +2,7 @@ import { searchPlayers } from "../../../api/nba/nbaPlayersApi";
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import type { NbaPlayer } from "../../../types/nba";
+import { Search } from "lucide-react";
 
 // search players by name, results show as a list below the input
 // arrow keys move through the results, enter opens the highlighted one
@@ -105,10 +106,11 @@ function PlayerSearch() {
     };
 
     return (
-        <div className="relative w-100" ref={containerRef}>
+        <div className="relative w-full sm:w-80" ref={containerRef}>
+            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500 pointer-events-none" />
             <input
                 type="text"
-                className="bg-white rounded w-full p-1"
+                className="w-full pl-9 pr-3 py-2 bg-zinc-900 border border-zinc-700 rounded-lg text-zinc-100 placeholder:text-zinc-500 focus:outline-none focus:border-sky-500"
                 placeholder="Search player..."
                 value={query}
                 role="combobox"
@@ -127,24 +129,24 @@ function PlayerSearch() {
                     id="player-search-list"
                     role="listbox"
                     ref={listRef}
-                    className="absolute z-10 left-0 right-0 mt-1 bg-white rounded shadow max-h-80 overflow-y-auto"
+                    className="absolute z-20 left-0 right-0 mt-1 p-1 bg-zinc-900 border border-zinc-800 rounded-lg shadow-xl max-h-80 overflow-y-auto"
                 >
                     {results.map((p, i) => (
                         <li key={p.id} id={`player-search-${p.id}`} role="option" aria-selected={i === highlighted}>
                             <button
-                                className={`flex w-full p-2 text-left cursor-pointer ${i === highlighted ? "bg-gray-200" : "hover:bg-gray-100"}`}
+                                className={`flex w-full px-3 py-2 rounded-md text-left cursor-pointer ${i === highlighted ? "bg-zinc-800 text-white" : "text-zinc-200"}`}
                                 type="button"
                                 tabIndex={-1}
                                 onMouseEnter={() => setHighlighted(i)}
                                 onClick={() => openPlayer(p.id)}
                             >
                                 {p.name}
-                                {p.team && <span className="ml-auto text-gray-500">{p.team}</span>}
+                                {p.team && <span className="ml-auto text-sm text-zinc-500">{p.team}</span>}
                             </button>
                         </li>
                     ))}
-                    {searching && results.length === 0 && <li className="p-2 text-gray-500">Searching...</li>}
-                    {!searching && results.length === 0 && <li className="p-2 text-gray-500">No players found</li>}
+                    {searching && results.length === 0 && <li className="px-3 py-2 text-zinc-500">Searching...</li>}
+                    {!searching && results.length === 0 && <li className="px-3 py-2 text-zinc-500">No players found</li>}
                 </ul>
             }
         </div>

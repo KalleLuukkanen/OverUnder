@@ -53,20 +53,20 @@ function PlayerInfo({ player }: { player: NbaPlayer }) {
     const shown = rows.filter(([, value]) => value);
 
     return (
-        <div className="flex flex-col bg-gray-100 rounded shadow p-3 space-y-2 w-full xl:w-80 shrink-0 self-start">
-            <span className="text-xl font-semibold">Player info</span>
+        <aside className="flex flex-col gap-3 bg-zinc-900 border border-zinc-800 rounded-xl p-4 w-full xl:w-80 shrink-0 self-start">
+            <h2 className="text-lg font-semibold">Player info</h2>
             {shown.length === 0 ?
-                <p className="text-gray-500">No player info available</p> :
-                <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1">
+                <p className="text-zinc-500">No player info available</p> :
+                <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-sm">
                     {shown.map(([label, value]) => (
                         <div key={label} className="contents">
-                            <dt className="text-gray-600">{label}</dt>
-                            <dd>{value}</dd>
+                            <dt className="text-zinc-400">{label}</dt>
+                            <dd className="text-zinc-100">{value}</dd>
                         </div>
                     ))}
                 </dl>
             }
-        </div>
+        </aside>
     )
 }
 

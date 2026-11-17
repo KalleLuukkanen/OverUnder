@@ -1,9 +1,7 @@
 export default function Loading() {
     return (
-        <div className="flex items-center justify-center min-h-screen">
-            <div
-                className="w-8 h-8 border-4 border-gray-300 dark:border-gray-600 border-t-gray-500 rounded-full animate-spin"
-            ></div>
+        <div className="flex items-center justify-center py-24">
+            <div className="w-8 h-8 border-4 border-zinc-700 border-t-sky-400 rounded-full animate-spin" />
         </div>
     )
 }

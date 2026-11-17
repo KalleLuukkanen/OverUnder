@@ -2,6 +2,7 @@ import type { NbaBoxScore } from "../../../types/nba";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import { useState } from "react";
 import { Link } from "react-router-dom";
+import table from "../../../styles/table";
 
 type SortKey = "minutes" | "pts" | "reb" | "ast" | "stl" | "blk" | "tov" | "fga" | "fg3a" | "fta";
 
@@ -44,24 +45,24 @@ function TeamBox({ team, players }: { team: string, players: NbaBoxScore[] }) {
     const total = (key: keyof NbaBoxScore) => players.reduce((sum, p) => sum + Number(p[key]), 0);
 
     return (
-        <div className="flex flex-col space-y-3">
-            <span className="text-2xl underline">{team}</span>
+        <div className="flex flex-col gap-2 min-w-0">
+            <span className="font-semibold text-zinc-300">{team}</span>
             {players.length === 0 ?
-                <p className="text-gray-500">No stats for this team</p> :
-                <div className="overflow-x-auto">
-                    <table className="text-right bg-white rounded shadow">
+                <p className="text-zinc-500">No stats for this team</p> :
+                <div className={table.wrapper}>
+                    <table className={table.table}>
                         <thead>
-                            <tr className="border-b">
-                                <th className="text-left p-2">Player</th>
+                            <tr className={table.headRow}>
+                                <th className={`${table.th} text-left`}>Player</th>
                                 {COLUMNS.map((c) => (
-                                    <th key={c.key} className="p-2">
+                                    <th key={c.key} className={table.th}>
                                         <button
-                                            className={`flex items-center ml-auto cursor-pointer ${sortKey === c.key ? "text-blue-600" : ""}`}
+                                            className={table.sortButton(sortKey === c.key)}
                                             type="button"
                                             onClick={() => changeSort(c.key)}
                                         >
                                             {c.label}
-                                            {sortKey === c.key && (ascending ? <ChevronUp size={16} /> : <ChevronDown size={16} />)}
+                                            {sortKey === c.key && (ascending ? <ChevronUp size={14} /> : <ChevronDown size={14} />)}
                                         </button>
                                     </th>
                                 ))}
@@ -69,38 +70,38 @@ function TeamBox({ team, players }: { team: string, players: NbaBoxScore[] }) {
                         </thead>
                         <tbody>
                             {sorted.map((p) => (
-                                <tr key={p.player_id} className="border-b">
-                                    <td className="text-left p-2 whitespace-nowrap">
-                                        <Link className="text-blue-500 hover:underline" to={`/nba/player/${p.player_id}`}>
+                                <tr key={p.player_id} className={table.row}>
+                                    <td className={`${table.td} text-left`}>
+                                        <Link className={table.link} to={`/nba/player/${p.player_id}`}>
                                             {p.player_name}
                                         </Link>
                                     </td>
-                                    <td className="p-2">{Math.round(p.minutes)}</td>
-                                    <td className="p-2 font-semibold">{p.pts}</td>
-                                    <td className="p-2">{p.reb}</td>
-                                    <td className="p-2">{p.ast}</td>
-                                    <td className="p-2">{p.stl}</td>
-                                    <td className="p-2">{p.blk}</td>
-                                    <td className="p-2">{p.tov}</td>
-                                    <td className="p-2">{shooting(p.fgm, p.fga)}</td>
-                                    <td className="p-2">{shooting(p.fg3m, p.fg3a)}</td>
-                                    <td className="p-2">{shooting(p.ftm, p.fta)}</td>
+                                    <td className={`${table.td} text-zinc-400`}>{Math.round(p.minutes)}</td>
+                                    <td className={`${table.td} font-semibold`}>{p.pts}</td>
+                                    <td className={table.td}>{p.reb}</td>
+                                    <td className={table.td}>{p.ast}</td>
+                                    <td className={table.td}>{p.stl}</td>
+                                    <td className={table.td}>{p.blk}</td>
+                                    <td className={table.td}>{p.tov}</td>
+                                    <td className={table.td}>{shooting(p.fgm, p.fga)}</td>
+                                    <td className={table.td}>{shooting(p.fg3m, p.fg3a)}</td>
+                                    <td className={table.td}>{shooting(p.ftm, p.fta)}</td>
                                 </tr>
                             ))}
                         </tbody>
                         <tfoot>
-                            <tr className="font-semibold">
-                                <td className="text-left p-2">Total</td>
-                                <td className="p-2"></td>
-                                <td className="p-2">{total("pts")}</td>
-                                <td className="p-2">{total("reb")}</td>
-                                <td className="p-2">{total("ast")}</td>
-                                <td className="p-2">{total("stl")}</td>
-                                <td className="p-2">{total("blk")}</td>
-                                <td className="p-2">{total("tov")}</td>
-                                <td className="p-2">{shooting(total("fgm"), total("fga"))}</td>
-                                <td className="p-2">{shooting(total("fg3m"), total("fg3a"))}</td>
-                                <td className="p-2">{shooting(total("ftm"), total("fta"))}</td>
+                            <tr className={table.footRow}>
+                                <td className={`${table.td} text-left`}>Total</td>
+                                <td className={table.td}></td>
+                                <td className={table.td}>{total("pts")}</td>
+                                <td className={table.td}>{total("reb")}</td>
+                                <td className={table.td}>{total("ast")}</td>
+                                <td className={table.td}>{total("stl")}</td>
+                                <td className={table.td}>{total("blk")}</td>
+                                <td className={table.td}>{total("tov")}</td>
+                                <td className={table.td}>{shooting(total("fgm"), total("fga"))}</td>
+                                <td className={table.td}>{shooting(total("fg3m"), total("fg3a"))}</td>
+                                <td className={table.td}>{shooting(total("ftm"), total("fta"))}</td>
                             </tr>
                         </tfoot>
                     </table>
@@ -117,7 +118,7 @@ function BoxScore({ boxScore, away_team, away_team_id, home_team, home_team_id }
     const homePlayers = boxScore.filter((val) => val.team_id === home_team_id);
 
     return (
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
             <TeamBox team={away_team} players={awayPlayers} />
             <TeamBox team={home_team} players={homePlayers} />
         </div>

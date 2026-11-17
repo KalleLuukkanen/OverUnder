@@ -1,6 +1,6 @@
 import type { NbaGame } from "../../../types/nba";
 import NBAGameCard from "./NBAGameCard";
-import { ChevronDown, ChevronRight } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 import { useState } from "react";
 
 // one day inside a week, date is 'yyyy-mm-dd'
@@ -23,19 +23,26 @@ function NBAPastGamesWeek({ weekStart, days, defaultOpen = false }: { weekStart:
     const gameCount = days.reduce((sum, d) => sum + d.games.length, 0);
 
     return (
-        <div className="flex flex-col space-y-2">
-            <button className="text-xl flex items-center cursor-pointer w-fit" type="button" onClick={() => setOpen(!open)}>
-                Week {start.toLocaleDateString("fi-FI")} - {end.toLocaleDateString("fi-FI")} ({gameCount} games)
-                {open ? <ChevronDown /> : <ChevronRight />}
+        <div className="flex flex-col border border-zinc-800 rounded-lg">
+            <button
+                className="flex items-center justify-between gap-4 px-3 py-2 cursor-pointer rounded-lg hover:bg-zinc-800/50"
+                type="button"
+                onClick={() => setOpen(!open)}
+            >
+                <span className="font-medium">
+                    Week {start.toLocaleDateString("fi-FI")} - {end.toLocaleDateString("fi-FI")}
+                    <span className="ml-2 text-sm font-normal text-zinc-500">{gameCount} games</span>
+                </span>
+                <ChevronDown size={18} className={`text-zinc-500 transition-transform ${open ? "" : "-rotate-90"}`} />
             </button>
             {open &&
-                <div className="flex flex-col space-y-4 ml-4">
+                <div className="flex flex-col gap-4 px-3 pb-3 pt-1">
                     {days.map((d) => (
-                        <div key={d.date} className="flex flex-col space-y-2">
-                            <span className="text-lg font-semibold capitalize">
+                        <div key={d.date} className="flex flex-col gap-2">
+                            <span className="text-sm font-medium text-zinc-400 capitalize">
                                 {toDate(d.date).toLocaleDateString("fi-FI", { weekday: "long", day: "numeric", month: "numeric" })}
                             </span>
-                            <ul className="flex flex-wrap gap-2">
+                            <ul className="flex flex-wrap gap-3">
                                 {d.games.map((g) => (
                                     <li key={g.id}>
                                         <NBAGameCard game={g} />

@@ -56,24 +56,25 @@ function NBAInfo() {
 
     if (loading) {
         return (
-            <p className="text-2xl">Loading...</p>
+            <p className="text-zinc-400">Loading games...</p>
         )
     }
 
     if (upcomingGames.length === 0) {
         return (
-            <div className="flex flex-col space-y-4">
-                <p className="text-xl">Upcoming games not found...</p>
-            </div>
+            <p className="text-zinc-500">Upcoming games not found...</p>
         )
     }
 
     return (
-        <div className="flex flex-col space-y-4 p-4">
+        <div className="flex flex-col gap-5">
             {groupByDay(upcomingGames).map((day) => (
-                <div key={day.date} className="flex flex-col space-y-2">
-                    <span className="text-xl font-semibold">{dayLabel(day.date)}</span>
-                    <ul className="flex flex-wrap gap-4">
+                <div key={day.date} className="flex flex-col gap-2">
+                    <span className="font-semibold text-zinc-300">
+                        {dayLabel(day.date)}
+                        <span className="ml-2 text-sm font-normal text-zinc-500">{day.games.length} games</span>
+                    </span>
+                    <ul className="flex flex-wrap gap-3">
                         {day.games.map((g) => (
                             <li key={g.id}>
                                 <NBAGameCard game={g} />

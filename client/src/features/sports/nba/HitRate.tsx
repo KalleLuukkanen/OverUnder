@@ -103,44 +103,50 @@ function HitRate({ team1_id, team2_id }: { team1_id: number, team2_id?: number }
         }
     };
 
-    if (loading) return <p className="text-2xl">Loading hit rate...</p>;
+    if (loading) return <p className="text-zinc-400">Loading hit rate...</p>;
 
     const roster = rosterSelected === team1_id ? team1Roster : team2Roster;
     const canCalculate = playerSelected !== null && line !== "" && !calculating;
 
+    // shared look of the form controls
+    const control = "bg-zinc-800 border border-zinc-700 rounded-md px-2 py-1.5 text-zinc-100 focus:outline-none focus:border-sky-500";
+    const label = "text-xs font-medium uppercase tracking-wide text-zinc-400";
+
     return (
-        <div className="col-span-2 mt-6">
-            <span className="text-2xl underline">Calculate hit rate</span>
-            <form className="flex flex-wrap gap-8 mt-4" onSubmit={calculate}>
-                <div className="flex flex-col space-y-3">
-                    <label className="flex flex-col">
-                        <span className="text-xl">Select team:</span>
+        <section className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
+            <h2 className="text-xl font-semibold">Calculate hit rate</h2>
+            <form className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4" onSubmit={calculate}>
+                <div className="flex flex-col gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <label className="flex flex-col gap-1">
+                            <span className={label}>Team</span>
+                            <select
+                                className={control}
+                                value={rosterSelected}
+                                onChange={(e) => changeTeam(Number(e.target.value))}
+                            >
+                                <option value={team1_id}>{team1?.name}</option>
+                                {team2_id && <option value={team2_id}>{team2?.name}</option>}
+                            </select>
+                        </label>
+                        <label className="flex flex-col gap-1">
+                            <span className={label}>Player</span>
+                            <select
+                                className={control}
+                                value={playerSelected ?? ""}
+                                onChange={(e) => setPlayerSelected(e.target.value ? Number(e.target.value) : null)}
+                            >
+                                <option value="">-- choose player --</option>
+                                {roster.map((p) => (
+                                    <option key={p.id} value={p.id}>{p.name}</option>
+                                ))}
+                            </select>
+                        </label>
+                    </div>
+                    <label className="flex flex-col gap-1">
+                        <span className={label}>Stat</span>
                         <select
-                            className="border w-fit rounded p-1"
-                            value={rosterSelected}
-                            onChange={(e) => changeTeam(Number(e.target.value))}
-                        >
-                            <option value={team1_id}>{team1?.name}</option>
-                            {team2_id && <option value={team2_id}>{team2?.name}</option>}
-                        </select>
-                    </label>
-                    <label className="flex flex-col">
-                        <span className="text-xl">Select player:</span>
-                        <select
-                            className="border w-fit rounded p-1"
-                            value={playerSelected ?? ""}
-                            onChange={(e) => setPlayerSelected(e.target.value ? Number(e.target.value) : null)}
-                        >
-                            <option value="">-- choose player --</option>
-                            {roster.map((p) => (
-                                <option key={p.id} value={p.id}>{p.name}</option>
-                            ))}
-                        </select>
-                    </label>
-                    <label className="flex flex-col">
-                        <span className="text-xl">Stat:</span>
-                        <select
-                            className="border w-fit rounded p-1"
+                            className={control}
                             value={stat}
                             onChange={(e) => setStat(e.target.value as NbaStat)}
                         >
@@ -149,22 +155,27 @@ function HitRate({ team1_id, team2_id }: { team1_id: number, team2_id?: number }
                             ))}
                         </select>
                     </label>
-                    <div className="flex space-x-4">
-                        <label className="flex flex-col">
-                            <span className="text-xl">Side:</span>
-                            <select
-                                className="border w-fit rounded p-1"
-                                value={side}
-                                onChange={(e) => setSide(e.target.value as NbaSide)}
-                            >
-                                <option value="over">Over</option>
-                                <option value="under">Under</option>
-                            </select>
-                        </label>
-                        <label className="flex flex-col">
-                            <span className="text-xl">Line:</span>
+                    <div className="grid grid-cols-3 gap-3">
+                        <div className="flex flex-col gap-1">
+                            <span className={label}>Side</span>
+                            {/* over / under as a two-button toggle */}
+                            <div className="flex rounded-md border border-zinc-700 overflow-hidden">
+                                {(["over", "under"] as NbaSide[]).map((s) => (
+                                    <button
+                                        key={s}
+                                        className={`flex-1 py-1.5 cursor-pointer capitalize ${side === s ? "bg-sky-500 text-white" : "bg-zinc-800 text-zinc-300 hover:bg-zinc-700"}`}
+                                        type="button"
+                                        onClick={() => setSide(s)}
+                                    >
+                                        {s}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                        <label className="flex flex-col gap-1">
+                            <span className={label}>Line</span>
                             <input
-                                className="border w-24 rounded p-1"
+                                className={control}
                                 type="number"
                                 step="0.5"
                                 min="0"
@@ -173,10 +184,10 @@ function HitRate({ team1_id, team2_id }: { team1_id: number, team2_id?: number }
                                 onChange={(e) => setLine(e.target.value)}
                             />
                         </label>
-                        <label className="flex flex-col">
-                            <span className="text-xl">Last games:</span>
+                        <label className="flex flex-col gap-1">
+                            <span className={label}>Last games</span>
                             <select
-                                className="border w-fit rounded p-1"
+                                className={control}
                                 value={limit}
                                 onChange={(e) => setLimit(Number(e.target.value))}
                             >
@@ -187,8 +198,9 @@ function HitRate({ team1_id, team2_id }: { team1_id: number, team2_id?: number }
                         </label>
                     </div>
                     {opponent &&
-                        <label className="flex items-center space-x-2">
+                        <label className="flex items-center gap-2 text-sm text-zinc-300 cursor-pointer w-fit">
                             <input
+                                className="accent-sky-500 w-4 h-4"
                                 type="checkbox"
                                 checked={vsOpponent}
                                 onChange={(e) => setVsOpponent(e.target.checked)}
@@ -196,29 +208,46 @@ function HitRate({ team1_id, team2_id }: { team1_id: number, team2_id?: number }
                             <span>Only games against {opponent.name}</span>
                         </label>
                     }
-                </div>
-
-                <div className="flex flex-col space-y-3 min-w-64">
                     <button
-                        className="bg-blue-500 text-white rounded px-4 py-2 w-fit cursor-pointer disabled:bg-gray-400 disabled:cursor-not-allowed"
+                        className="mt-1 bg-sky-500 hover:bg-sky-400 text-white font-medium rounded-md px-4 py-2 cursor-pointer disabled:bg-zinc-700 disabled:text-zinc-400 disabled:cursor-not-allowed"
                         type="submit"
                         disabled={!canCalculate}
                     >
                         {calculating ? "Calculating..." : "Calculate"}
                     </button>
-                    {errorMessage && <p className="text-red-600">{errorMessage}</p>}
+                </div>
+
+                <div className="flex flex-col gap-3 md:border-l md:border-zinc-800 md:pl-6">
+                    {errorMessage && <p className="text-rose-400">{errorMessage}</p>}
+                    {!result && !errorMessage &&
+                        <p className="text-zinc-500">Choose a player, stat and line to see how often it would have hit.</p>
+                    }
                     {result && (
                         result.games === 0 ?
-                            <p className="text-gray-500">No games found</p> :
-                            <div className="flex flex-col space-y-2">
-                                <p className="text-3xl font-bold">{result.hit_rate}%</p>
-                                <p>
-                                    {result.side} {result.line}: {result.hits}/{result.games} games, avg {result.average}
-                                </p>
-                                <ul className="flex flex-col space-y-1">
+                            <p className="text-zinc-500">No games found</p> :
+                            <div className="flex flex-col gap-3">
+                                <div className="flex items-end gap-4">
+                                    <span className={`text-5xl font-bold tabular-nums ${result.hit_rate !== null && result.hit_rate >= 50 ? "text-emerald-400" : "text-rose-400"}`}>
+                                        {result.hit_rate}%
+                                    </span>
+                                    <span className="pb-1 text-zinc-400">
+                                        <span className="capitalize">{result.side}</span> {result.line} · {result.hits}/{result.games} games · avg {result.average}
+                                    </span>
+                                </div>
+                                {/* hit rate bar */}
+                                <div className="h-2 rounded-full bg-zinc-800 overflow-hidden">
+                                    <div className="h-full bg-emerald-500" style={{ width: `${result.hit_rate ?? 0}%` }} />
+                                </div>
+                                <ul className="flex flex-col divide-y divide-zinc-800 text-sm">
                                     {result.results.map((r) => (
-                                        <li key={r.game_id} className={r.hit ? "text-green-700" : "text-red-600"}>
-                                            {new Date(r.game_date).toLocaleDateString("fi-FI")} {r.is_home ? "vs" : "@"} {r.opponent}: {r.value} ({r.minutes} min)
+                                        <li key={r.game_id} className="flex items-center gap-3 py-1.5">
+                                            <span className={`w-6 text-center text-xs font-bold rounded ${r.hit ? "bg-emerald-500/15 text-emerald-400" : "bg-rose-500/15 text-rose-400"}`}>
+                                                {r.hit ? "✓" : "✗"}
+                                            </span>
+                                            <span className="text-zinc-400 w-24">{new Date(r.game_date).toLocaleDateString("fi-FI")}</span>
+                                            <span className="w-16">{r.is_home ? "vs" : "@"} {r.opponent}</span>
+                                            <span className="font-semibold tabular-nums w-8 text-right">{r.value}</span>
+                                            <span className="text-zinc-500 tabular-nums">{Math.round(r.minutes)} min</span>
                                         </li>
                                     ))}
                                 </ul>
@@ -226,7 +255,7 @@ function HitRate({ team1_id, team2_id }: { team1_id: number, team2_id?: number }
                     )}
                 </div>
             </form>
-        </div>
+        </section>
     )
 }
 

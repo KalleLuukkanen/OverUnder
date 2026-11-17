@@ -1,15 +1,26 @@
 import { type NbaBoxScore, type NbaRosterPlayer } from "../../../types/nba";
 import { getPlayersLastGames, getPlayersLastGamesVsOpponent } from "../../../api/nba/nbaPlayerGamesApi";
 import { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 
-// one game's stat line, e.g. "Minutes: 34, Pts: 28, Ast: 5, Reb: 7, On 12.11.2026"
+// one game's stat line, e.g. "34 MIN · 28 PTS · 7 REB · 5 AST · 12.11.2026"
 function StatLine({ game }: { game: NbaBoxScore }) {
     return (
-        <p>
-            Minutes: {game.minutes}, Pts: {game.pts}, Ast: {game.ast}, Reb: {game.reb},
-            On {new Date(game.game_date).toLocaleDateString("fi-FI")}
+        <p className="tabular-nums">
+            {Math.round(game.minutes)} MIN · <span className="font-semibold">{game.pts} PTS</span> · {game.reb} REB · {game.ast} AST
+            <span className="text-zinc-500"> · {new Date(game.game_date).toLocaleDateString("fi-FI")}</span>
         </p>
     );
+}
+
+// label on the left, value on the right
+function Row({ label, children }: { label: string, children: React.ReactNode }) {
+    return (
+        <div className="flex flex-col sm:flex-row sm:gap-3">
+            <span className="text-zinc-400 sm:w-44 shrink-0">{label}</span>
+            <div>{children}</div>
+        </div>
+    )
 }
 
 function NBAPlayerBrief({ player, opp_team_id, opp_team }: { player: NbaRosterPlayer, opp_team_id: number, opp_team: string }) {
@@ -44,36 +55,33 @@ function NBAPlayerBrief({ player, opp_team_id, opp_team }: { player: NbaRosterPl
     }, [player.id, opp_team_id]);
 
     return (
-        <div className="flex flex-col space-y-2">
-            <p className="font-bold">Games played: {player.games}</p>
-            <div className="flex space-x-2">
-                <p className="font-bold">Season averages:</p>
+        <div className="flex flex-col gap-2 text-sm">
+            <Row label="Games played">{player.games}</Row>
+            <Row label="Season averages">
                 {player.games > 0 ?
-                    <p>MPG: {player.minutes}, PPG: {player.pts}, APG: {player.ast}, RPG: {player.reb}</p> :
-                    <p className="text-gray-500">No games this season</p>
+                    <p className="tabular-nums">{player.minutes} MIN · <span className="font-semibold">{player.pts} PTS</span> · {player.reb} REB · {player.ast} AST</p> :
+                    <p className="text-zinc-500">No games this season</p>
                 }
-            </div>
+            </Row>
 
-            {loading ? <p className="text-gray-500">Loading games...</p> :
-                errorMessage ? <p className="text-red-600">{errorMessage}</p> :
+            {loading ? <p className="text-zinc-500">Loading games...</p> :
+                errorMessage ? <p className="text-rose-400">{errorMessage}</p> :
                     <>
-                        <div className="flex space-x-2">
-                            <p className="font-bold">Last performance:</p>
+                        <Row label="Last game">
                             {lastPerformance ?
                                 <StatLine game={lastPerformance} /> :
-                                <p className="text-gray-500">No games found</p>
+                                <p className="text-zinc-500">No games found</p>
                             }
-                        </div>
-                        <div className="flex space-x-2">
-                            <p className="font-bold">Last performance against {opp_team}:</p>
+                        </Row>
+                        <Row label={`Last game vs ${opp_team}`}>
                             {lastPerformanceVS ?
                                 <StatLine game={lastPerformanceVS} /> :
-                                <p className="text-gray-500">No games against {opp_team} found</p>
+                                <p className="text-zinc-500">No games against {opp_team} found</p>
                             }
-                        </div>
+                        </Row>
                     </>
             }
-            <p className="font-bold hover:text-blue-500 hover:underline mt-4">See more stats</p>
+            <Link className="mt-1 w-fit text-sky-400 hover:underline" to={`/nba/player/${player.id}`}>See more stats →</Link>
         </div>
     )
 }

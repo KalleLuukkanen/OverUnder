@@ -1,5 +1,6 @@
 import { useParams } from "react-router-dom";
 import BackButton from "../components/BackButton";
+import Loading from "../components/Loading";
 import PlayerRecentGames from "../features/sports/nba/PlayerRecentGames";
 import { getOne } from "../api/nba/nbaPlayersApi";
 import { useState, useEffect } from "react";
@@ -42,29 +43,27 @@ function NBAPlayer() {
         return () => { cancelled = true };
     }, [playerId]);
 
-    if (loading) return <p className="text-3xl">Loading player...</p>
-    if (errorMessage) return <p className="text-3xl">{errorMessage}</p>
+    if (loading) return <Loading />
+    if (errorMessage) return <p className="text-zinc-400 py-12 text-center text-xl">{errorMessage}</p>
 
     if (player) {
         return (
             // key: a new player remounts the sections, so their state (sorting, tabs) starts fresh
-            <div key={player.id} className="flex flex-col space-y-2 bg-white p-2 rounded">
-                <span className="flex items-center gap-3">
+            <div key={player.id} className="flex flex-col gap-4">
+                <div className="flex items-start gap-3 bg-zinc-900 border border-zinc-800 rounded-xl p-4">
                     <BackButton />
-                    <p className="text-4xl font-bold">{player.name}</p>
-                    <span className="border min-h-8" />
-                    <p className="text-2xl font-semibold">{player.team}</p>
-                </span>
-                <span className="border" />
-                <div className="flex flex-col xl:flex-row gap-4 mt-2">
-                    <div className="flex flex-col space-y-3 min-w-0">
-                        <div>
-                            <span className="text-2xl font-semibold">Latest games:</span>
-                        </div>
+                    <div className="flex flex-col">
+                        <h1 className="text-3xl font-bold">{player.name}</h1>
+                        <span className="text-zinc-400">
+                            {[player.team_name ?? "Free agent", player.position, player.jersey && `#${player.jersey}`].filter(Boolean).join(" · ")}
+                        </span>
+                    </div>
+                </div>
+                <div className="flex flex-col-reverse xl:flex-row gap-4">
+                    <div className="flex flex-col gap-3 min-w-0 flex-1">
+                        <h2 className="text-xl font-semibold">Latest games</h2>
                         <PlayerRecentGames player_id={player.id} />
-                        <div>
-                            <span className="text-2xl font-semibold">Career averages:</span>
-                        </div>
+                        <h2 className="text-xl font-semibold mt-3">Career averages</h2>
                         <PlayerCareer player_id={player.id} />
                     </div>
                     <PlayerInfo player={player} />

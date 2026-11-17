@@ -1,16 +1,16 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
-import { LogIn, House } from "lucide-react";
+import { LogIn, House, ChevronDown } from "lucide-react";
 import { sports } from "../types/sports";
 
 // onSelect closes the dropdown: the header stays mounted when moving between pages
 function LeagueList({ leagues, onSelect }: { leagues: string[], onSelect: () => void }) {
     return (
-        <ul className="absolute left-0 top-full mt-2 z-10 flex flex-col space-y-2 bg-black p-3 rounded shadow-lg min-w-max">
+        <ul className="absolute left-0 top-full mt-2 z-20 flex flex-col min-w-40 p-1 bg-zinc-900 border border-zinc-800 rounded-lg shadow-xl">
             {leagues.map((l) => (
                 <li key={l}>
                     <Link
-                        className="text-gray-300 hover:font-bold"
+                        className="block px-3 py-2 rounded-md text-zinc-300 hover:bg-zinc-800 hover:text-white"
                         to={`/${l.toLowerCase().replace(/\s+/g, "-")}`}
                         onClick={onSelect}
                     >
@@ -25,42 +25,57 @@ function LeagueList({ leagues, onSelect }: { leagues: string[], onSelect: () => 
 function Header() {
     const [openSport, setOpenSport] = useState<string | null>(null);
 
+    // clicking outside the sports menu closes the open dropdown
+    const navRef = useRef<HTMLUListElement>(null);
+    useEffect(() => {
+        const handleClick = (e: MouseEvent) => {
+            if (navRef.current && !navRef.current.contains(e.target as Node)) {
+                setOpenSport(null);
+            }
+        };
+        document.addEventListener("mousedown", handleClick);
+        return () => document.removeEventListener("mousedown", handleClick);
+    }, []);
+
     const toggleShowing = (sport: string) => {
         setOpenSport((current) => (current === sport ? null : sport));
     };
 
     return (
-        <div className="flex bg-black p-4">
-            <ul className="flex space-x-6 ml-4">
+        <header className="sticky top-0 z-30 bg-zinc-950/80 backdrop-blur border-b border-zinc-800">
+            <div className="flex items-center gap-6 max-w-7xl mx-auto px-4 h-14">
                 <Link
-                    className="text-gray-300 cursor-pointer"
+                    className="flex items-center gap-2 text-zinc-100 font-semibold hover:text-white"
                     to="/"
                     onClick={() => setOpenSport(null)}
                 >
-                    <House />
+                    <House size={20} className="text-sky-400" />
+                    <span className="hidden sm:inline">BetAssistant</span>
                 </Link>
-                {Object.entries(sports).map(([sport, leagues]) => (
-                    <li key={sport} className="relative">
-                        <button
-                            className="cursor-pointer text-gray-300 hover:font-bold"
-                            onClick={() => toggleShowing(sport)}
-                        >
-                            {sport}
-                        </button>
-                        {openSport === sport && <LeagueList leagues={leagues} onSelect={() => setOpenSport(null)} />}
-                    </li>
-                ))}
-            </ul>
-            <div className="ml-auto mr-4">
+                <ul className="flex items-center gap-1" ref={navRef}>
+                    {Object.entries(sports).map(([sport, leagues]) => (
+                        <li key={sport} className="relative">
+                            <button
+                                className={`flex items-center gap-1 px-3 py-1.5 rounded-md cursor-pointer hover:bg-zinc-800 hover:text-white ${openSport === sport ? "bg-zinc-800 text-white" : "text-zinc-300"}`}
+                                type="button"
+                                onClick={() => toggleShowing(sport)}
+                            >
+                                {sport}
+                                <ChevronDown size={16} className={`transition-transform ${openSport === sport ? "rotate-180" : ""}`} />
+                            </button>
+                            {openSport === sport && <LeagueList leagues={leagues} onSelect={() => setOpenSport(null)} />}
+                        </li>
+                    ))}
+                </ul>
                 <Link
-                    className="text-gray-300 flex cursor-pointer hover:font-bold"
+                    className="ml-auto flex items-center gap-2 px-3 py-1.5 rounded-md text-zinc-300 hover:bg-zinc-800 hover:text-white"
                     to="/auth"
                     onClick={() => setOpenSport(null)}
                 >
-                    <LogIn />Log in
+                    <LogIn size={18} />Log in
                 </Link>
             </div>
-        </div>
+        </header>
     );
 }
 

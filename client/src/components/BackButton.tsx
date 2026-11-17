@@ -18,12 +18,12 @@ function BackButton({ fallback = "/nba" }: { fallback?: string }) {
 
     return (
         <button
-            className="cursor-pointer rounded hover:bg-gray-200 p-1 self-start"
+            className="p-1.5 rounded-md self-start cursor-pointer text-zinc-400 hover:bg-zinc-800 hover:text-white"
             type="button"
             aria-label="Go back"
             onClick={goBack}
         >
-            <ArrowLeft size={28} />
+            <ArrowLeft size={22} />
         </button>
     )
 }

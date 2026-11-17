@@ -49,22 +49,24 @@ function NBAGame() {
     // upcoming view only for games not played yet, finished games without stats are handled in GamePlayed
     if (!isPlayed(game)) {
         return (
-            <div key={game.id} className="flex flex-col bg-gray-300 p-2 rounded">
-                <span className="flex items-center gap-3">
+            <div key={game.id} className="flex flex-col gap-4">
+                <div className="flex items-start gap-3 bg-zinc-900 border border-zinc-800 rounded-xl p-4">
                     <BackButton />
-                    <span className="text-3xl font-bold">{game.away_team} @ {game.home_team} - {gameDateTime(game)}</span>
-                </span>
-                <div className="grid grid-cols-2 gap-4">
+                    <div className="flex flex-col">
+                        <h1 className="text-3xl font-bold">{game.away_team} @ {game.home_team}</h1>
+                        <span className="text-zinc-400">{game.away_team_name} at {game.home_team_name} · {gameDateTime(game)}</span>
+                    </div>
+                </div>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                     <NBAGameTeam team_id={game.away_team_id} opp_team_id={game.home_team_id} opp_team={game.home_team} />
                     <NBAGameTeam team_id={game.home_team_id} opp_team_id={game.away_team_id} opp_team={game.away_team} />
-                    <HitRate team1_id={game.home_team_id} team2_id={game.away_team_id} />
                 </div>
+                <HitRate team1_id={game.home_team_id} team2_id={game.away_team_id} />
             </div>
         )
     } else {
         return (
-            <div key={game.id} className="flex flex-col bg-gray-300 p-2 rounded">
-                <BackButton />
+            <div key={game.id} className="flex flex-col gap-4">
                 <GamePlayed game={game} />
             </div>
         )
