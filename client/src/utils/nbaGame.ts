@@ -29,4 +29,16 @@ const gameDateTime = (game: NbaGame) => {
     return `${day} ${time}`;
 };
 
-export { usTodayKey, usDayKey, isPlayed, isScoreMissing, gameDateTime };
+// overtime marker: 1 -> 'OT', 2 -> '2OT', regulation or unknown -> ''
+const overtimeLabel = (periods: number | null) => {
+    if (!periods) return "";
+    return periods === 1 ? "OT" : `${periods}OT`;
+};
+
+// 'Final', 'Final/OT', 'Final/2OT'
+const finalLabel = (periods: number | null) => {
+    const ot = overtimeLabel(periods);
+    return ot ? `Final/${ot}` : "Final";
+};
+
+export { usTodayKey, usDayKey, isPlayed, isScoreMissing, gameDateTime, overtimeLabel, finalLabel };

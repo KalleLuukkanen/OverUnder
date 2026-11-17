@@ -30,7 +30,7 @@ const isStat = (stat: string) => Object.hasOwn(STATS, stat);
 const boxScores = () => sql`
     SELECT
         pg.player_id, p.name AS player_name,
-        pg.game_id, g.game_date, g.season,
+        pg.game_id, g.game_date, g.season, g.overtime_periods,
         pg.team_id, t.abbreviation AS team,
         pg.opponent_id, o.abbreviation AS opponent,
         pg.is_home, pg.minutes::float8 AS minutes,
@@ -126,7 +126,7 @@ const getHitRate = async (
     const value = sql.unsafe(STATS[stat]);
     const result = await sql`
         SELECT
-            pg.game_id, g.game_date, o.abbreviation AS opponent, pg.is_home,
+            pg.game_id, g.game_date, g.overtime_periods, o.abbreviation AS opponent, pg.is_home,
             pg.minutes::float8 AS minutes,
             (${value})::int AS value
         FROM nba_player_game pg
@@ -140,6 +140,7 @@ const getHitRate = async (
     const games = result.map((game) => ({
         game_id: game.game_id as string,
         game_date: game.game_date as Date,
+        overtime_periods: game.overtime_periods as number | null,
         opponent: game.opponent as string,
         is_home: game.is_home as boolean,
         minutes: game.minutes as number,

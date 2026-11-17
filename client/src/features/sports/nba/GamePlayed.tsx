@@ -2,7 +2,7 @@ import { type NbaBoxScore, type NbaGame } from "../../../types/nba";
 import { getGameBoxScore } from "../../../api/nba/nbaPlayerGamesApi";
 import { useState, useEffect } from "react";
 import BoxScore from "./BoxScore";
-import { gameDateTime } from "../../../utils/nbaGame";
+import { gameDateTime, finalLabel } from "../../../utils/nbaGame";
 import BackButton from "../../../components/BackButton";
 
 // one side of the scoreboard: team name, score and W/L, the loser is dimmed
@@ -67,7 +67,7 @@ function GamePlayed({ game }: { game: NbaGame }) {
             <div className="flex flex-col gap-4 bg-zinc-900 border border-zinc-800 rounded-xl p-4">
                 <div className="flex items-center gap-3">
                     <BackButton />
-                    <span className="text-sm text-zinc-400">Final · {gameDateTime(game)}</span>
+                    <span className="text-sm text-zinc-400">{finalLabel(game.overtime_periods)} · {gameDateTime(game)}</span>
                 </div>
                 <div className="flex flex-col md:flex-row md:items-center md:justify-center gap-4 md:gap-12 pb-2">
                     <ScoreSide

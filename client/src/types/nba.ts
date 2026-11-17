@@ -20,6 +20,7 @@ export type NbaGame = {
     away_team_name: string;
     home_score: number | null;   // null until the game is played
     away_score: number | null;
+    overtime_periods: number | null;   // 0 = regulation, null until played
 };
 
 export type NbaPlayer = {
@@ -58,6 +59,7 @@ export type NbaBoxScore = {
     game_id: string;
     game_date: string;
     season: string;
+    overtime_periods: number | null;
     team_id: number;
     team: string;
     opponent_id: number;
@@ -115,6 +117,7 @@ export type NbaHitRate = {
     results: {
         game_id: string;
         game_date: string;
+        overtime_periods: number | null;
         opponent: string;
         is_home: boolean;
         minutes: number;

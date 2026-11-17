@@ -301,10 +301,11 @@ def upsert_games(cur: psycopg.Cursor, games: list[dict]) -> None:
     # DO UPDATE so postponed/rescheduled games get their new date
     cur.executemany(
         """
-        INSERT INTO nba_game (id, game_date, start_time, season, home_team_id, away_team_id, home_score, away_score)
-        VALUES (
+        INSERT INTO nba_game (
+            id, game_date, start_time, season, home_team_id, away_team_id, home_score, away_score, overtime_periods
+        ) VALUES (
             %(id)s, %(game_date)s, %(start_time)s, %(season)s, %(home_team_id)s, %(away_team_id)s,
-            %(home_score)s, %(away_score)s
+            %(home_score)s, %(away_score)s, %(overtime_periods)s
         )
         ON CONFLICT (id) DO UPDATE SET
             game_date = EXCLUDED.game_date,
@@ -313,9 +314,10 @@ def upsert_games(cur: psycopg.Cursor, games: list[dict]) -> None:
             away_team_id = EXCLUDED.away_team_id,
             -- schedule rows have no score, don't wipe one that box scores already set
             home_score = COALESCE(EXCLUDED.home_score, nba_game.home_score),
-            away_score = COALESCE(EXCLUDED.away_score, nba_game.away_score)
+            away_score = COALESCE(EXCLUDED.away_score, nba_game.away_score),
+            overtime_periods = COALESCE(EXCLUDED.overtime_periods, nba_game.overtime_periods)
         """,
-        [{"home_score": None, "away_score": None, **g} for g in games],
+        [{"home_score": None, "away_score": None, "overtime_periods": None, **g} for g in games],
     )
 
 
@@ -334,8 +336,15 @@ def upsert_box_scores(cur: psycopg.Cursor, rows: list[dict]) -> None:
         for r in rows
     }
     # final score = sum of the team's player points (DNP rows are skipped but they have 0 points anyway)
+    team_minutes: dict[tuple[str, int], float] = {}
     for r in rows:
         games[r["game_id"]]["home_score" if r["is_home"] else "away_score"] += r["pts"]
+        key = (r["game_id"], r["team_id"])
+        team_minutes[key] = team_minutes.get(key, 0) + r["minutes"]
+    # overtime periods from minutes: regulation = 48 x 5 players = 240 team minutes, each OT adds 5 x 5 = 25
+    for (game_id, _), minutes in team_minutes.items():
+        periods = max(0, round((minutes - 240) / 25))
+        games[game_id]["overtime_periods"] = max(games[game_id].get("overtime_periods") or 0, periods)
     upsert_games(cur, list(games.values()))
 
     # rows are sorted by date, so the last one wins = player's latest team

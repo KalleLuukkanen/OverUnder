@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import type { NbaBoxScore } from "../../../types/nba";
 import table from "../../../styles/table";
+import { overtimeLabel } from "../../../utils/nbaGame";
 
 // "made-attempted" shooting format, e.g. 8-15
 const shooting = (made: number, attempted: number) => `${made}-${attempted}`;
@@ -60,6 +61,9 @@ function PlayerRecentGames({ player_id, limit = 5 }: { player_id: number, limit?
                                 <Link className={table.link} to={`/nba/game/${g.game_id}`}>
                                     {g.is_home ? "vs" : "@"} {g.opponent}
                                 </Link>
+                                {overtimeLabel(g.overtime_periods) &&
+                                    <span className="ml-2 px-1.5 rounded text-xs font-semibold bg-amber-500/15 text-amber-400">{overtimeLabel(g.overtime_periods)}</span>
+                                }
                             </td>
                             <td className={`${table.td} text-zinc-400`}>{Math.round(g.minutes)}</td>
                             <td className={`${table.td} font-semibold`}>{g.pts}</td>

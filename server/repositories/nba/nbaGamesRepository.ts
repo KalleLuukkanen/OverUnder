@@ -16,7 +16,7 @@ const gamesWithTeams = () => sql`
         g.id, g.game_date, g.start_time, g.season,
         g.home_team_id, home.abbreviation AS home_team, home.name AS home_team_name,
         g.away_team_id, away.abbreviation AS away_team, away.name AS away_team_name,
-        g.home_score, g.away_score
+        g.home_score, g.away_score, g.overtime_periods
     FROM nba_game g
     JOIN nba_team home ON home.id = g.home_team_id
     JOIN nba_team away ON away.id = g.away_team_id

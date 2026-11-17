@@ -1,5 +1,6 @@
 import type { NbaHitRate } from "../../../types/nba";
 import { Link } from "react-router-dom";
+import { overtimeLabel } from "../../../utils/nbaGame";
 
 // hit rate percentage, a bar, and every game as a hit (✓) or miss (✗)
 function HitRateResult({ result }: { result: NbaHitRate }) {
@@ -34,6 +35,11 @@ function HitRateResult({ result }: { result: NbaHitRate }) {
                         </Link>
                         <span className="font-semibold tabular-nums w-8 text-right">{r.value}</span>
                         <span className="text-zinc-500 tabular-nums">{Math.round(r.minutes)} min</span>
+                        {overtimeLabel(r.overtime_periods) &&
+                            <span className="px-1.5 rounded text-xs font-semibold bg-amber-500/15 text-amber-400" title="Game went to overtime">
+                                {overtimeLabel(r.overtime_periods)}
+                            </span>
+                        }
                     </li>
                 ))}
             </ul>

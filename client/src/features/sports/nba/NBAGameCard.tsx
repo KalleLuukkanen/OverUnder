@@ -1,6 +1,6 @@
 import type { NbaGame } from "../../../types/nba";
 import { Link } from "react-router-dom";
-import { isScoreMissing, gameDateTime } from "../../../utils/nbaGame";
+import { isScoreMissing, gameDateTime, finalLabel } from "../../../utils/nbaGame";
 
 // one team's row: abbreviation and score, the loser is dimmed
 function TeamRow({ team, score, won, prefix = "" }: { team: string, score: number | null, won: boolean | null, prefix?: string }) {
@@ -55,7 +55,7 @@ function NBAGameCard({ game, team_id, bg = "bg-zinc-900" }: { game: NbaGame, tea
             <div className="flex items-center justify-between text-xs">
                 {scoreMissing ?
                     <span className="text-zinc-500">Score not available yet</span> :
-                    <span className="text-zinc-500">{hasScore ? "Final" : "Upcoming"}</span>
+                    <span className="text-zinc-500">{hasScore ? finalLabel(game.overtime_periods) : "Upcoming"}</span>
                 }
                 <span className="text-zinc-500 group-hover:text-sky-400">See more →</span>
             </div>
