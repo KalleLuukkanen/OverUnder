@@ -2,6 +2,7 @@ import SportInfo from "../features/sports/mainpage/SportInfo";
 import { sports } from "../types/sports";
 import { useState } from "react";
 import { ChevronDown } from "lucide-react";
+import PropChecker from "../features/props/PropChecker";
 
 function MainPage() {
     // all sports open by default
@@ -14,21 +15,24 @@ function MainPage() {
     };
 
     return (
-        <ul className="flex flex-col gap-6">
-            {Object.entries(sports).map(([sport, leagues]) => (
-                <li key={sport} className="flex flex-col gap-3">
-                    <button
-                        className="flex items-center gap-2 w-fit cursor-pointer text-3xl font-bold text-zinc-100 hover:text-white"
-                        type="button"
-                        onClick={() => toggleShowing(sport)}
-                    >
-                        {sport}
-                        <ChevronDown size={24} className={`text-zinc-500 transition-transform ${openSports.includes(sport) ? "" : "-rotate-90"}`} />
-                    </button>
-                    {openSports.includes(sport) && <SportInfo leagues={leagues} />}
-                </li>
-            ))}
-        </ul>
+        <div className="flex flex-col gap-8">
+            <PropChecker />
+            <ul className="flex flex-col gap-6">
+                {Object.entries(sports).map(([sport, leagues]) => (
+                    <li key={sport} className="flex flex-col gap-3">
+                        <button
+                            className="flex items-center gap-2 w-fit cursor-pointer text-3xl font-bold text-zinc-100 hover:text-white"
+                            type="button"
+                            onClick={() => toggleShowing(sport)}
+                        >
+                            {sport}
+                            <ChevronDown size={24} className={`text-zinc-500 transition-transform ${openSports.includes(sport) ? "" : "-rotate-90"}`} />
+                        </button>
+                        {openSports.includes(sport) && <SportInfo leagues={leagues} />}
+                    </li>
+                ))}
+            </ul>
+        </div>
     )
 }
 

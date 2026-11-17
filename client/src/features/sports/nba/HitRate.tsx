@@ -2,24 +2,8 @@ import type { NbaHitRate, NbaRosterPlayer, NbaSide, NbaStat, NbaTeam } from "../
 import { getHitRate } from "../../../api/nba/nbaPlayerGamesApi";
 import { getOne, getRoster } from "../../../api/nba/nbaTeamsApi";
 import { useState, useEffect } from "react";
-
-// stats shown in the stat dropdown, value is what the api expects
-const STATS: { value: NbaStat, label: string }[] = [
-    { value: "pts", label: "Points" },
-    { value: "reb", label: "Rebounds" },
-    { value: "ast", label: "Assists" },
-    { value: "pra", label: "Pts + Reb + Ast" },
-    { value: "pr", label: "Pts + Reb" },
-    { value: "pa", label: "Pts + Ast" },
-    { value: "ra", label: "Reb + Ast" },
-    { value: "fg3m", label: "3-pointers made" },
-    { value: "fgm", label: "Field goals made" },
-    { value: "ftm", label: "Free throws made" },
-    { value: "stl", label: "Steals" },
-    { value: "blk", label: "Blocks" },
-    { value: "stocks", label: "Steals + Blocks" },
-    { value: "tov", label: "Turnovers" },
-];
+import { STATS } from "./hitRateStats";
+import HitRateResult from "./HitRateResult";
 
 function HitRate({ team1_id, team2_id }: { team1_id: number, team2_id?: number }) {
 
@@ -222,37 +206,7 @@ function HitRate({ team1_id, team2_id }: { team1_id: number, team2_id?: number }
                     {!result && !errorMessage &&
                         <p className="text-zinc-500">Choose a player, stat and line to see how often it would have hit.</p>
                     }
-                    {result && (
-                        result.games === 0 ?
-                            <p className="text-zinc-500">No games found</p> :
-                            <div className="flex flex-col gap-3">
-                                <div className="flex items-end gap-4">
-                                    <span className={`text-5xl font-bold tabular-nums ${result.hit_rate !== null && result.hit_rate >= 50 ? "text-emerald-400" : "text-rose-400"}`}>
-                                        {result.hit_rate}%
-                                    </span>
-                                    <span className="pb-1 text-zinc-400">
-                                        <span className="capitalize">{result.side}</span> {result.line} · {result.hits}/{result.games} games · avg {result.average}
-                                    </span>
-                                </div>
-                                {/* hit rate bar */}
-                                <div className="h-2 rounded-full bg-zinc-800 overflow-hidden">
-                                    <div className="h-full bg-emerald-500" style={{ width: `${result.hit_rate ?? 0}%` }} />
-                                </div>
-                                <ul className="flex flex-col divide-y divide-zinc-800 text-sm">
-                                    {result.results.map((r) => (
-                                        <li key={r.game_id} className="flex items-center gap-3 py-1.5">
-                                            <span className={`w-6 text-center text-xs font-bold rounded ${r.hit ? "bg-emerald-500/15 text-emerald-400" : "bg-rose-500/15 text-rose-400"}`}>
-                                                {r.hit ? "✓" : "✗"}
-                                            </span>
-                                            <span className="text-zinc-400 w-24">{new Date(r.game_date).toLocaleDateString("fi-FI")}</span>
-                                            <span className="w-16">{r.is_home ? "vs" : "@"} {r.opponent}</span>
-                                            <span className="font-semibold tabular-nums w-8 text-right">{r.value}</span>
-                                            <span className="text-zinc-500 tabular-nums">{Math.round(r.minutes)} min</span>
-                                        </li>
-                                    ))}
-                                </ul>
-                            </div>
-                    )}
+                    {result && <HitRateResult result={result} />}
                 </div>
             </form>
         </section>

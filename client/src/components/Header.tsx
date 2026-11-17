@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
-import { Link } from "react-router-dom";
-import { LogIn, House, ChevronDown } from "lucide-react";
+import { Link, NavLink } from "react-router-dom";
+import { LogIn, House, ChevronDown, Target } from "lucide-react";
 import { sports } from "../types/sports";
 
 // onSelect closes the dropdown: the header stays mounted when moving between pages
@@ -52,6 +52,14 @@ function Header() {
                     <House size={20} className="text-sky-400" />
                     <span className="hidden sm:inline">OverUnder</span>
                 </Link>
+                <NavLink
+                    className={({ isActive }) => `flex items-center gap-1.5 px-3 py-1.5 rounded-md font-medium hover:bg-zinc-800 hover:text-white ${isActive ? "bg-zinc-800 text-sky-400" : "text-sky-400"}`}
+                    to="/props"
+                    onClick={() => setOpenSport(null)}
+                >
+                    <Target size={16} />
+                    <span className="hidden sm:inline">Prop checker</span>
+                </NavLink>
                 <ul className="flex items-center gap-1" ref={navRef}>
                     {Object.entries(sports).map(([sport, leagues]) => (
                         <li key={sport} className="relative">

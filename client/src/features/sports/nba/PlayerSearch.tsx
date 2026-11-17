@@ -6,7 +6,9 @@ import { Search } from "lucide-react";
 
 // search players by name, results show as a list below the input
 // arrow keys move through the results, enter opens the highlighted one
-function PlayerSearch() {
+// onSelect given: the chosen player is passed to it instead of opening the player's page
+function PlayerSearch({ onSelect, placeholder = "Search player...", className = "w-full sm:w-80" }:
+    { onSelect?: (player: NbaPlayer) => void, placeholder?: string, className?: string }) {
 
     const navigate = useNavigate();
 
@@ -68,12 +70,16 @@ function PlayerSearch() {
         row?.scrollIntoView({ block: "nearest" });
     }, [highlighted]);
 
-    // go to player's page and clear the search
-    const openPlayer = (player_id: number) => {
+    // clear the search, then give the player to onSelect or go to the player's page
+    const openPlayer = (player: NbaPlayer) => {
         setQuery("");
         setResults([]);
         setOpen(false);
-        navigate(`/nba/player/${player_id}`);
+        if (onSelect) {
+            onSelect(player);
+        } else {
+            navigate(`/nba/player/${player.id}`);
+        }
     };
 
     const showList = open && query.trim().length >= 2;
@@ -96,7 +102,8 @@ function PlayerSearch() {
             case "Enter":
                 if (results.length === 0) return;
                 // nothing highlighted -> first result
-                openPlayer(results[highlighted >= 0 ? highlighted : 0].id);
+                e.preventDefault();  // don't submit a surrounding form
+                openPlayer(results[highlighted >= 0 ? highlighted : 0]);
                 break;
             case "Escape":
                 setOpen(false);
@@ -106,12 +113,12 @@ function PlayerSearch() {
     };
 
     return (
-        <div className="relative w-full sm:w-80" ref={containerRef}>
+        <div className={`relative ${className}`} ref={containerRef}>
             <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500 pointer-events-none" />
             <input
                 type="text"
                 className="w-full pl-9 pr-3 py-2 bg-zinc-900 border border-zinc-700 rounded-lg text-zinc-100 placeholder:text-zinc-500 focus:outline-none focus:border-sky-500"
-                placeholder="Search player..."
+                placeholder={placeholder}
                 value={query}
                 role="combobox"
                 aria-expanded={showList}
@@ -138,7 +145,7 @@ function PlayerSearch() {
                                 type="button"
                                 tabIndex={-1}
                                 onMouseEnter={() => setHighlighted(i)}
-                                onClick={() => openPlayer(p.id)}
+                                onClick={() => openPlayer(p)}
                             >
                                 {p.name}
                                 {p.team && <span className="ml-auto text-sm text-zinc-500">{p.team}</span>}
