@@ -50,7 +50,7 @@ function Header() {
                     onClick={() => setOpenSport(null)}
                 >
                     <House size={20} className="text-sky-400" />
-                    <span className="hidden sm:inline">BetAssistant</span>
+                    <span className="hidden sm:inline">OverUnder</span>
                 </Link>
                 <ul className="flex items-center gap-1" ref={navRef}>
                     {Object.entries(sports).map(([sport, leagues]) => (
