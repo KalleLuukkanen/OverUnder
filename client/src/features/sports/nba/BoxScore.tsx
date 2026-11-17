@@ -1,6 +1,7 @@
 import type { NbaBoxScore } from "../../../types/nba";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import { useState } from "react";
+import { Link } from "react-router-dom";
 
 type SortKey = "minutes" | "pts" | "reb" | "ast" | "stl" | "blk" | "tov" | "fga" | "fg3a" | "fta";
 
@@ -69,7 +70,11 @@ function TeamBox({ team, players }: { team: string, players: NbaBoxScore[] }) {
                         <tbody>
                             {sorted.map((p) => (
                                 <tr key={p.player_id} className="border-b">
-                                    <td className="text-left p-2 whitespace-nowrap">{p.player_name}</td>
+                                    <td className="text-left p-2 whitespace-nowrap">
+                                        <Link className="text-blue-500 hover:underline" to={`/nba/player/${p.player_id}`}>
+                                            {p.player_name}
+                                        </Link>
+                                    </td>
                                     <td className="p-2">{Math.round(p.minutes)}</td>
                                     <td className="p-2 font-semibold">{p.pts}</td>
                                     <td className="p-2">{p.reb}</td>
