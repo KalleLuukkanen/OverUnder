@@ -27,6 +27,17 @@ export type NbaPlayer = {
     team_id: number | null;
     team: string | null;
     team_name: string | null;
+    birth_date: string | null;      // 'yyyy-mm-dd'
+    country: string | null;
+    school: string | null;
+    height_inches: number | null;
+    weight_lbs: number | null;
+    jersey: string | null;
+    position: string | null;        // 'G', 'F', 'C', 'G-F' or 'F-C'
+    draft_year: number | null;
+    draft_round: number | null;     // null with a draft_year = undrafted
+    draft_number: number | null;
+    from_year: number | null;
 };
 
 // player in team's roster, averages are null if no games played this season
@@ -109,4 +120,45 @@ export type NbaHitRate = {
         value: number;
         hit: boolean;
     }[];
+};
+
+// per game averages over a season or a whole career, percentages are null without attempts
+export type NbaAverages = {
+    games: number;
+    minutes: number | null;
+    pts: number;
+    reb: number;
+    ast: number;
+    stl: number;
+    blk: number;
+    tov: number;
+    fgm: number;
+    fga: number;
+    fg3m: number;
+    fg3a: number;
+    ftm: number;
+    fta: number;
+    fg_pct: number | null;
+    fg3_pct: number | null;
+    ft_pct: number | null;
+};
+
+export type NbaPlayerSeason = NbaAverages & {
+    season: string;
+    teams: string;
+};
+
+export type NbaCareerAverages = NbaAverages & {
+    seasons: number;
+};
+
+// season by season + career averages of one season type, career is null if never played
+export type NbaPlayerCareerPart = {
+    seasons: NbaPlayerSeason[];
+    career: NbaCareerAverages | null;
+};
+
+export type NbaPlayerCareer = {
+    regular: NbaPlayerCareerPart;
+    playoffs: NbaPlayerCareerPart;
 };

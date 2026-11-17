@@ -76,6 +76,7 @@ app.get("/api/nba/teams/:teamId/vs/:opponentId/games", nbaGamesController.getHea
 app.post("/api/nba/players/name", nbaPlayersController.getByName);
 app.post("/api/nba/players/search", nbaPlayersController.searchPlayers);
 app.get("/api/nba/players/:playerId", nbaPlayersController.getOne);
+app.get("/api/nba/players/:playerId/career", nbaPlayersController.getPlayersCareer);
 app.post("/api/nba/players/:playerId/games", nbaPlayerGamesController.getPlayersGames);
 app.post("/api/nba/players/:playerId/games/last", nbaPlayerGamesController.getPlayersLastGames);
 app.post("/api/nba/players/:playerId/averages", nbaPlayerGamesController.getPlayersSeasonAverages);

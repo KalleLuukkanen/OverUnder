@@ -41,8 +41,27 @@ const searchPlayers = async (req: Request, res: Response) => {
     return res.status(200).json(players);
 };
 
+// get player's season by season and career averages, regular season and playoffs separately
+const getPlayersCareer = async (req: Request, res: Response) => {
+    const player_id = Number(req.params.playerId);
+    if (!Number.isInteger(player_id)) {
+        return res.status(400).json({ error: "Missing or invalid player id" });
+    }
+    const [regularSeasons, regularCareer, playoffSeasons, playoffCareer] = await Promise.all([
+        nbaPlayersRepository.getPlayersSeasons(player_id, "regular"),
+        nbaPlayersRepository.getPlayersCareer(player_id, "regular"),
+        nbaPlayersRepository.getPlayersSeasons(player_id, "playoffs"),
+        nbaPlayersRepository.getPlayersCareer(player_id, "playoffs"),
+    ]);
+    return res.status(200).json({
+        regular: { seasons: regularSeasons, career: regularCareer ?? null },
+        playoffs: { seasons: playoffSeasons, career: playoffCareer ?? null },
+    });
+};
+
 export {
     getOne,
     getByName,
     searchPlayers,
+    getPlayersCareer,
 };

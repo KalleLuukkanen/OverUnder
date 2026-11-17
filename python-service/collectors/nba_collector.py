@@ -29,6 +29,17 @@ DATASET = "eoinamoore/historical-nba-data-and-player-box-scores"
 # 1 = preseason, 2 = regular season, 3 = All-Star, 4 = playoffs, 5 = play-in, 6 = NBA Cup final
 INCLUDED_GAME_TYPES = {"2", "4", "5", "6"}
 
+# game types counted in season / career totals, like official stats (play-in and Cup final don't count)
+SEASON_TYPES = {"2": "regular", "4": "playoffs"}
+TOTAL_STATS = ("pts", "reb", "ast", "stl", "blk", "tov", "fgm", "fga", "fg3m", "fg3a", "ftm", "fta")
+
+# team nickname -> id ('Lakers' -> LAL id), some seasons in the dataset are missing playerteamId
+TEAM_BY_NICKNAME = {
+    " ".join(name.split()[i:]): tid
+    for tid, (_, name) in TEAMS.items()
+    for i in range(1, len(name.split()))
+}
+
 
 # ---------- seasons ----------
 
@@ -52,7 +63,9 @@ def normalize_game_id(raw: str) -> str:
 
 
 def game_season(game_id: str) -> str:
-    return season_string(2000 + int(game_id[3:5]))
+    # 2-digit year: the league started in 1946, so 46-99 are 1900s
+    yy = int(game_id[3:5])
+    return season_string(1900 + yy if yy >= 46 else 2000 + yy)
 
 
 def wanted(game_id: str, seasons: set[str]) -> bool:
@@ -88,12 +101,102 @@ def to_int(value: str) -> int:
     return int(float(value)) if value.strip() else 0
 
 
-def read_box_scores(seasons: set[str]) -> list[dict]:
+def add_to_season_totals(totals: dict, game_id: str, r: dict) -> None:
+    """Add one box score line to the player's season totals (every season, not just the synced ones)."""
+    season_type = SEASON_TYPES.get(game_id[2])
+    if season_type is None:
+        return
+    minutes = parse_minutes(r["numMinutes"])
+    stats = {
+        "pts": to_int(r["points"]), "reb": to_int(r["reboundsTotal"]), "ast": to_int(r["assists"]),
+        "stl": to_int(r["steals"]), "blk": to_int(r["blocks"]), "tov": to_int(r["turnovers"]),
+        "fgm": to_int(r["fieldGoalsMade"]), "fga": to_int(r["fieldGoalsAttempted"]),
+        "fg3m": to_int(r["threePointersMade"]), "fg3a": to_int(r["threePointersAttempted"]),
+        "ftm": to_int(r["freeThrowsMade"]), "fta": to_int(r["freeThrowsAttempted"]),
+    }
+    # DNP rows have no minutes and no stats. Old seasons can lack minutes, so stats alone also count as played
+    if minutes == 0 and not any(stats.values()):
+        return
+    key = (to_int(r["personId"]), game_season(game_id), season_type)
+    t = totals.get(key)
+    if t is None:
+        t = totals[key] = {
+            "player_id": key[0], "season": key[1], "season_type": key[2],
+            "games": 0, "minutes_games": 0, "minutes": 0.0, "first_game": {},
+            **{s: 0 for s in TOTAL_STATS},
+        }
+    t["games"] += 1
+    if minutes > 0:
+        t["minutes_games"] += 1
+        t["minutes"] += minutes
+    for s in TOTAL_STATS:
+        t[s] += stats[s]
+    # remember when the player first played for each team, to list teams in order
+    team_id = to_int(r["playerteamId"]) or TEAM_BY_NICKNAME.get(r["playerteamName"].strip(), 0)
+    day = r["gameDateTimeEst"][:10]
+    if team_id in TEAMS and (team_id not in t["first_game"] or day < t["first_game"][team_id]):
+        t["first_game"][team_id] = day
+
+
+def opt_int(value: str) -> int | None:
+    """'81' -> 81, '' / 'Undrafted' / '0' / '-1' -> None."""
+    try:
+        number = int(float(value))
+    except ValueError:
+        return None
+    return number if number > 0 else None
+
+
+def opt_text(value: str) -> str | None:
+    return value.strip() or None
+
+
+def position(r: dict) -> str | None:
+    """guard/forward/center flags -> 'G', 'F', 'C', 'G-F' or 'F-C'."""
+    parts = [p for flag, p in (("guard", "G"), ("forward", "F"), ("center", "C")) if r[flag].strip() == "1"]
+    return "-".join(parts) or None
+
+
+def read_players() -> list[dict]:
+    """Bio of every player in the dataset (height, weight, school, draft...)."""
+    players = []
+    with download("Players.csv") as path, open(path, newline="", encoding="utf-8") as fh:
+        for r in csv.DictReader(fh):
+            player_id = opt_int(r["personId"])
+            if player_id is None:
+                continue
+            birth = r["birthDate"].strip()[:10]
+            # undrafted players have -1 as draft year: store their first season with no round = 'Undrafted'
+            draft_year = opt_int(r["draftYear"])
+            if r["draftYear"].strip() == "-1":
+                draft_year = opt_int(r["fromYear"])
+            players.append({
+                "id": player_id,
+                "birth_date": date.fromisoformat(birth) if birth else None,
+                "country": opt_text(r["country"]),
+                "school": opt_text(r["school"]),
+                "height_inches": opt_int(r["heightInches"]),
+                "weight_lbs": opt_int(r["bodyWeightLbs"]),
+                "jersey": opt_text(r["jersey"]),
+                "position": position(r),
+                "draft_year": draft_year,
+                "draft_round": opt_int(r["draftRound"]),
+                "draft_number": opt_int(r["draftNumber"]),
+                "from_year": opt_int(r["fromYear"]),
+            })
+    print(f"  {len(players)} player bios")
+    return players
+
+
+def read_box_scores(seasons: set[str]) -> tuple[list[dict], list[dict]]:
+    """Box scores of the given seasons + season totals of every season in the dataset."""
     rows = []
+    totals: dict = {}
     skipped_dnp = 0
     with download("PlayerStatistics.csv") as path, open(path, newline="", encoding="utf-8") as fh:
         for r in csv.DictReader(fh):
             game_id = normalize_game_id(r["gameId"])
+            add_to_season_totals(totals, game_id, r)
             if not wanted(game_id, seasons):
                 continue
             team_id, opp_id = to_int(r["playerteamId"]), to_int(r["opponentteamId"])
@@ -131,7 +234,15 @@ def read_box_scores(seasons: set[str]) -> list[dict]:
             })
     print(f"  {len(rows)} box scores ({skipped_dnp} DNP rows skipped)")
     rows.sort(key=lambda r: r["game_date"])
-    return rows
+
+    season_totals = []
+    for t in totals.values():
+        first_game = t.pop("first_game")
+        t["teams"] = "/".join(TEAMS[tid][0] for tid in sorted(first_game, key=first_game.get))
+        t["minutes"] = round(t["minutes"], 2)
+        season_totals.append(t)
+    print(f"  {len(season_totals)} player seasons")
+    return rows, season_totals
 
 
 def read_schedule(season: str) -> list[dict]:
@@ -246,9 +357,52 @@ def upsert_box_scores(cur: psycopg.Cursor, rows: list[dict]) -> None:
     print(f"  saved {len(games)} games, {len(players)} players, {len(rows)} box scores")
 
 
+def upsert_season_totals(cur: psycopg.Cursor, totals: list[dict]) -> None:
+    # every season is rewritten on each sync: cheap (~35k rows) and picks up dataset corrections
+    cur.executemany(
+        """
+        INSERT INTO nba_player_season (
+            player_id, season, season_type, teams, games, minutes_games, minutes,
+            pts, reb, ast, stl, blk, tov, fgm, fga, fg3m, fg3a, ftm, fta
+        ) VALUES (
+            %(player_id)s, %(season)s, %(season_type)s, %(teams)s, %(games)s, %(minutes_games)s, %(minutes)s,
+            %(pts)s, %(reb)s, %(ast)s, %(stl)s, %(blk)s, %(tov)s,
+            %(fgm)s, %(fga)s, %(fg3m)s, %(fg3a)s, %(ftm)s, %(fta)s
+        )
+        ON CONFLICT (player_id, season_type, season) DO UPDATE SET
+            teams = EXCLUDED.teams, games = EXCLUDED.games,
+            minutes_games = EXCLUDED.minutes_games, minutes = EXCLUDED.minutes,
+            pts = EXCLUDED.pts, reb = EXCLUDED.reb, ast = EXCLUDED.ast,
+            stl = EXCLUDED.stl, blk = EXCLUDED.blk, tov = EXCLUDED.tov,
+            fgm = EXCLUDED.fgm, fga = EXCLUDED.fga, fg3m = EXCLUDED.fg3m,
+            fg3a = EXCLUDED.fg3a, ftm = EXCLUDED.ftm, fta = EXCLUDED.fta
+        """,
+        totals,
+    )
+    print(f"  saved {len(totals)} player season totals")
+
+
+def update_player_info(cur: psycopg.Cursor, players: list[dict]) -> None:
+    # only players already in nba_player (synced seasons) get a bio, others are skipped by the WHERE
+    cur.executemany(
+        """
+        UPDATE nba_player SET
+            birth_date = %(birth_date)s, country = %(country)s, school = %(school)s,
+            height_inches = %(height_inches)s, weight_lbs = %(weight_lbs)s,
+            jersey = %(jersey)s, position = %(position)s,
+            draft_year = %(draft_year)s, draft_round = %(draft_round)s, draft_number = %(draft_number)s,
+            from_year = %(from_year)s
+        WHERE id = %(id)s
+        """,
+        players,
+    )
+    print("  updated player bios")
+
+
 def sync(seasons: list[str]) -> None:
     season_set = set(seasons)
-    box_scores = read_box_scores(season_set)
+    box_scores, season_totals = read_box_scores(season_set)
+    players = read_players()
     schedule = [g for s in sorted(season_set) for g in read_schedule(s)]
 
     with psycopg.connect() as conn:  # connection params from PG* env vars
@@ -256,6 +410,8 @@ def sync(seasons: list[str]) -> None:
             upsert_teams(cur)
             upsert_games(cur, schedule)
             upsert_box_scores(cur, box_scores)
+            upsert_season_totals(cur, season_totals)
+            update_player_info(cur, players)
         conn.commit()
 
 

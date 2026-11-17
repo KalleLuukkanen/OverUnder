@@ -17,7 +17,7 @@ function SportInfo({ leagues }: { leagues: string[] }) {
             {leagues.map((l) => (
                 <li key={l}>
                     <button
-                        className="text-xl underline cursor-pointer flex items-center"
+                        className="text-xl underline cursor-pointer flex items-center font-semibold"
                         onClick={() => toggleShowing(l)}
                     >
                         {l} {openLeagues.includes(l) ? <ChevronDown /> : <ChevronRight />}

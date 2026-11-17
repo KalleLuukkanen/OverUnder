@@ -3,6 +3,8 @@ import { getOne } from "../api/nba/nbaPlayersApi";
 import { useState, useEffect } from "react";
 import type { NbaPlayer } from "../types/nba";
 import { ApiError } from "../api/apiClient";
+import PlayerCareer from "../features/sports/nba/PlayerCareer";
+import PlayerInfo from "../features/sports/nba/PlayerInfo";
 
 function NBAPlayer() {
 
@@ -43,12 +45,19 @@ function NBAPlayer() {
                 <span className="flex items-center gap-3">
                     <p className="text-4xl font-bold">{player.name}</p>
                     <span className="border min-h-8" />
-                    <p className="text-2xl">{player.team}</p>
+                    <p className="text-2xl font-semibold">{player.team}</p>
                 </span>
                 <span className="border" />
-                <div>
-
+                <div className="flex flex-col xl:flex-row gap-4 mt-2">
+                    <PlayerInfo player={player} />
+                    <div className="flex flex-col space-y-3 min-w-0">
+                        <div>
+                            <span className="text-2xl font-semibold">Career averages:</span>
+                        </div>
+                        <PlayerCareer player_id={player.id} />
+                    </div>
                 </div>
+
             </div>
         )
     }

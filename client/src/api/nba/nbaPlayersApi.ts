@@ -1,5 +1,5 @@
 import { get, post } from "../apiClient";
-import type { NbaPlayer } from "../../types/nba";
+import type { NbaPlayer, NbaPlayerCareer } from "../../types/nba";
 
 // get one player based on id
 const getOne = (playerId: number) =>
@@ -13,8 +13,13 @@ const getByName = (name: string) =>
 const searchPlayers = (query: string, limit?: number) =>
     post<NbaPlayer[]>("/api/nba/players/search", { query, limit });
 
+// get player's season by season and career averages, regular season and playoffs
+const getPlayersCareer = (playerId: number) =>
+    get<NbaPlayerCareer>(`/api/nba/players/${playerId}/career`);
+
 export {
     getOne,
     getByName,
     searchPlayers,
+    getPlayersCareer,
 };
