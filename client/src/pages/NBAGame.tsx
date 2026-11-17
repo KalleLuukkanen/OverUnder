@@ -8,6 +8,7 @@ import NBAGameTeam from "../features/sports/nba/NBAGameTeam";
 import HitRate from "../features/sports/nba/HitRate";
 import GamePlayed from "../features/sports/nba/GamePlayed";
 import { isPlayed } from "../utils/nbaGame";
+import BackButton from "../components/BackButton";
 
 function NBAGame() {
 
@@ -46,7 +47,10 @@ function NBAGame() {
     if (!isPlayed(game)) {
         return (
             <div className="flex flex-col bg-gray-300 p-2 rounded">
-                <span className="text-3xl font-bold">{game.away_team} @ {game.home_team} - {new Date(game.game_date).toLocaleDateString("fi-FI")}</span>
+                <span className="flex items-center gap-3">
+                    <BackButton />
+                    <span className="text-3xl font-bold">{game.away_team} @ {game.home_team} - {new Date(game.game_date).toLocaleDateString("fi-FI")}</span>
+                </span>
                 <div className="grid grid-cols-2 gap-4">
                     <NBAGameTeam team_id={game.away_team_id} opp_team_id={game.home_team_id} opp_team={game.home_team} />
                     <NBAGameTeam team_id={game.home_team_id} opp_team_id={game.away_team_id} opp_team={game.away_team} />
@@ -57,6 +61,7 @@ function NBAGame() {
     } else {
         return (
             <div className="flex flex-col bg-gray-300 p-2 rounded">
+                <BackButton />
                 <GamePlayed game={game} />
             </div>
         )

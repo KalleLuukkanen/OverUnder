@@ -1,4 +1,5 @@
 import type { NbaGame } from "../../../types/nba";
+import { Link } from "react-router-dom";
 import { isScoreMissing } from "../../../utils/nbaGame";
 
 // team_id is optional: when given, the card also shows that team's W/L
@@ -34,7 +35,7 @@ function NBAGameCard({ game, team_id, bg = "bg-gray-300" }: { game: NbaGame, tea
                 <p>{game.away_team} @ {game.home_team} </p>
                 {scoreMissing && <p className="text-gray-600">Score not available yet</p>}
                 <p>{new Date(game.game_date).toLocaleDateString("fi-FI")}</p>
-                <a className="ml-auto mt-2 text-blue-500 hover:underline text-lg" href={`/nba/game/${game.id}`}>See more</a>
+                <Link className="ml-auto mt-2 text-blue-500 hover:underline text-lg" to={`/nba/game/${game.id}`}>See more</Link>
             </div>
         )
     } else {
@@ -57,7 +58,7 @@ function NBAGameCard({ game, team_id, bg = "bg-gray-300" }: { game: NbaGame, tea
                 </div>
                 <p>{game.away_score} - {game.home_score}</p>
                 <p>{new Date(game.game_date).toLocaleDateString("fi-FI")}</p>
-                <a className="ml-auto mt-2 text-blue-500 hover:underline text-lg" href={`/nba/game/${game.id}`}>See more</a>
+                <Link className="ml-auto mt-2 text-blue-500 hover:underline text-lg" to={`/nba/game/${game.id}`}>See more</Link>
             </div>
         )
     }
