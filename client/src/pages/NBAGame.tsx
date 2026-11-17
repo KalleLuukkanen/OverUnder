@@ -20,6 +20,9 @@ function NBAGame() {
 
     useEffect(() => {
         let cancelled = false;
+        // another game opened from this page (last games cards): reset before loading
+        setLoading(true);
+        setGame(null);
         const load = async () => {
             try {
                 const game = await getOne(gameId as string);
@@ -46,7 +49,7 @@ function NBAGame() {
     // upcoming view only for games not played yet, finished games without stats are handled in GamePlayed
     if (!isPlayed(game)) {
         return (
-            <div className="flex flex-col bg-gray-300 p-2 rounded">
+            <div key={game.id} className="flex flex-col bg-gray-300 p-2 rounded">
                 <span className="flex items-center gap-3">
                     <BackButton />
                     <span className="text-3xl font-bold">{game.away_team} @ {game.home_team} - {new Date(game.game_date).toLocaleDateString("fi-FI")}</span>
@@ -60,7 +63,7 @@ function NBAGame() {
         )
     } else {
         return (
-            <div className="flex flex-col bg-gray-300 p-2 rounded">
+            <div key={game.id} className="flex flex-col bg-gray-300 p-2 rounded">
                 <BackButton />
                 <GamePlayed game={game} />
             </div>

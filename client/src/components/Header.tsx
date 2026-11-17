@@ -1,18 +1,21 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { LogIn, House } from "lucide-react";
 import { sports } from "../types/sports";
 
-function LeagueList({ leagues }: { leagues: string[] }) {
+// onSelect closes the dropdown: the header stays mounted when moving between pages
+function LeagueList({ leagues, onSelect }: { leagues: string[], onSelect: () => void }) {
     return (
         <ul className="absolute left-0 top-full mt-2 z-10 flex flex-col space-y-2 bg-black p-3 rounded shadow-lg min-w-max">
             {leagues.map((l) => (
                 <li key={l}>
-                    <a
+                    <Link
                         className="text-gray-300 hover:font-bold"
-                        href={`/${l.toLowerCase().replace(/\s+/g, "-")}`}
+                        to={`/${l.toLowerCase().replace(/\s+/g, "-")}`}
+                        onClick={onSelect}
                     >
                         {l}
-                    </a>
+                    </Link>
                 </li>
             ))}
         </ul>
@@ -29,12 +32,13 @@ function Header() {
     return (
         <div className="flex bg-black p-4">
             <ul className="flex space-x-6 ml-4">
-                <a
+                <Link
                     className="text-gray-300 cursor-pointer"
-                    href="/"
+                    to="/"
+                    onClick={() => setOpenSport(null)}
                 >
                     <House />
-                </a>
+                </Link>
                 {Object.entries(sports).map(([sport, leagues]) => (
                     <li key={sport} className="relative">
                         <button
@@ -43,17 +47,18 @@ function Header() {
                         >
                             {sport}
                         </button>
-                        {openSport === sport && <LeagueList leagues={leagues} />}
+                        {openSport === sport && <LeagueList leagues={leagues} onSelect={() => setOpenSport(null)} />}
                     </li>
                 ))}
             </ul>
             <div className="ml-auto mr-4">
-                <a
+                <Link
                     className="text-gray-300 flex cursor-pointer hover:font-bold"
-                    href="/auth"
+                    to="/auth"
+                    onClick={() => setOpenSport(null)}
                 >
                     <LogIn />Log in
-                </a>
+                </Link>
             </div>
         </div>
     );

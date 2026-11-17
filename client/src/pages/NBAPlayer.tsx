@@ -18,6 +18,10 @@ function NBAPlayer() {
 
     useEffect(() => {
         let cancelled = false;
+        // another player opened from this page (search): reset before loading
+        setLoading(true);
+        setErrorMessage("");
+        setPlayer(null);
         const load = async () => {
             try {
                 const player = await getOne(Number(playerId));
@@ -43,7 +47,8 @@ function NBAPlayer() {
 
     if (player) {
         return (
-            <div className="flex flex-col space-y-2 bg-white p-2 rounded">
+            // key: a new player remounts the sections, so their state (sorting, tabs) starts fresh
+            <div key={player.id} className="flex flex-col space-y-2 bg-white p-2 rounded">
                 <span className="flex items-center gap-3">
                     <BackButton />
                     <p className="text-4xl font-bold">{player.name}</p>
