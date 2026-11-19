@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef } from "react";
 import { Link, NavLink } from "react-router-dom";
-import { LogIn, House, ChevronDown, Target } from "lucide-react";
+import { LogIn, House, ChevronDown, Target, CircleUser } from "lucide-react";
 import { sports } from "../types/sports";
 import ThemeToggle from "./ThemeToggle";
+import { authClient } from "../utils/auth";
 
 // onSelect closes the dropdown: the header stays mounted when moving between pages
 function LeagueList({ leagues, onSelect }: { leagues: string[], onSelect: () => void }) {
@@ -25,6 +26,7 @@ function LeagueList({ leagues, onSelect }: { leagues: string[], onSelect: () => 
 
 function Header() {
     const [openSport, setOpenSport] = useState<string | null>(null);
+    const { data: session } = authClient.useSession();
 
     // clicking outside the sports menu closes the open dropdown
     const navRef = useRef<HTMLUListElement>(null);
@@ -82,7 +84,10 @@ function Header() {
                     to="/auth"
                     onClick={() => setOpenSport(null)}
                 >
-                    <LogIn size={18} />Log in
+                    {session ?
+                        <><CircleUser size={18} /><span className="hidden sm:inline max-w-32 truncate">{session.user.name}</span></> :
+                        <><LogIn size={18} />Log in</>
+                    }
                 </Link>
             </div>
         </header>

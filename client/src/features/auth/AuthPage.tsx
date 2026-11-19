@@ -1,11 +1,17 @@
 import { LogIn, LogOut, UserPlus } from "lucide-react";
 import { authClient } from "../../utils/auth";
 import { useState, type FormEvent } from "react";
+import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import Loading from "../../components/Loading";
 
 function AuthPage() {
     const { data: session, isPending } = authClient.useSession();
-    const [mode, setMode] = useState<"signin" | "signup">("signin");
+    const navigate = useNavigate();
+    // a sign in prompt passes the page it was on (state.from) and can open the sign up form (?mode=signup)
+    const location = useLocation();
+    const [searchParams] = useSearchParams();
+    const from = (location.state as { from?: string } | null)?.from;
+    const [mode, setMode] = useState<"signin" | "signup">(searchParams.get("mode") === "signup" ? "signup" : "signin");
     const [name, setName] = useState("");
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
@@ -18,7 +24,12 @@ function AuthPage() {
             mode === "signup"
                 ? await authClient.signUp.email({ name, email, password })
                 : await authClient.signIn.email({ email, password });
-        if (error) setError(error.message ?? "Something went wrong");
+        if (error) {
+            setError(error.message ?? "Something went wrong");
+        } else if (from) {
+            // back to the locked page, replace so going back doesn't land on the form again
+            navigate(from, { replace: true });
+        }
     };
 
     if (isPending) return <Loading />;

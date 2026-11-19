@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import * as nbaGamesRepository from "../../repositories/nba/nbaGamesRepository.js";
+import { allowSeason, seasonOfDate, seasonOfGameId } from "../../access.js";
 
 const DATE_FORMAT = /^\d{4}-\d{2}-\d{2}$/;   // '2026-11-14'
 const SEASON_FORMAT = /^\d{4}-\d{2}$/;       // '2026-27'
@@ -10,6 +11,7 @@ const getOne = async (req: Request, res: Response) => {
     if (!game_id) {
         return res.status(400).json({ error: "Missing game id" });
     }
+    if (!allowSeason(req, res, seasonOfGameId(game_id))) return;
     const game = await nbaGamesRepository.getOne(game_id);
     if (!game) {
         return res.status(404).json({ error: "Game not found" });
@@ -29,6 +31,7 @@ const getGamesByDate = async (req: Request, res: Response) => {
     if (typeof date !== "string" || !DATE_FORMAT.test(date)) {
         return res.status(400).json({ error: "Missing or invalid date, expected format 'YYYY-MM-DD'" });
     }
+    if (!allowSeason(req, res, seasonOfDate(date))) return;
     const games = await nbaGamesRepository.getGamesByDate(date);
     return res.status(200).json(games);
 };
@@ -39,6 +42,7 @@ const getSeasonAllGames = async (req: Request, res: Response) => {
     if (typeof season !== "string" || !SEASON_FORMAT.test(season)) {
         return res.status(400).json({ error: "Missing or invalid season, expected format '2026-27'" });
     }
+    if (!allowSeason(req, res, season)) return;
     const games = await nbaGamesRepository.getSeasonAllGames(season);
     return res.status(200).json(games);
 };
@@ -65,6 +69,7 @@ const getTeamsGames = async (req: Request, res: Response) => {
     if (typeof season !== "string" || !SEASON_FORMAT.test(season)) {
         return res.status(400).json({ error: "Invalid season, expected format '2026-27'" });
     }
+    if (!allowSeason(req, res, season)) return;
     const games = await nbaGamesRepository.getTeamsGames(team_id, season);
     return res.status(200).json(games);
 };
@@ -119,6 +124,7 @@ const getGameTeamStats = async (req: Request, res: Response) => {
     if (!game_id) {
         return res.status(400).json({ error: "Missing game id" });
     }
+    if (!allowSeason(req, res, seasonOfGameId(game_id))) return;
     const stats = await nbaGamesRepository.getGameTeamStats(game_id);
     return res.status(200).json(stats);
 };

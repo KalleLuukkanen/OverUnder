@@ -9,6 +9,7 @@ import HitRate from "../features/sports/nba/HitRate";
 import GamePlayed from "../features/sports/nba/GamePlayed";
 import { isPlayed, gameDateTime } from "../utils/nbaGame";
 import BackButton from "../components/BackButton";
+import SignInPrompt from "../components/SignInPrompt";
 
 function NBAGame() {
 
@@ -17,19 +18,24 @@ function NBAGame() {
     const [loading, setLoading] = useState(true);
 
     const [game, setGame] = useState<NbaGame | null>(null);
+    // game from a past season and not signed in
+    const [locked, setLocked] = useState(false);
 
     useEffect(() => {
         let cancelled = false;
         // another game opened from this page (last games cards): reset before loading
         setLoading(true);
         setGame(null);
+        setLocked(false);
         const load = async () => {
             try {
                 const game = await getOne(gameId as string);
                 if (!cancelled) setGame(game);
             } catch (err) {
                 if (!cancelled) {
-                    if (err instanceof ApiError && err.status === 404) {
+                    if (err instanceof ApiError && err.status === 401) {
+                        setLocked(true);
+                    } else if (err instanceof ApiError && err.status === 404) {
                         alert("Game data not found");
                     } else {
                         alert("Something went wrong, please try again");
@@ -44,6 +50,20 @@ function NBAGame() {
     }, [gameId]);
 
     if (loading) return <Loading />;
+    if (locked) {
+        return (
+            <div className="flex flex-col gap-4">
+                <div className="flex items-start gap-3 bg-zinc-900 border border-zinc-800 rounded-xl p-4">
+                    <BackButton />
+                    <h1 className="text-3xl font-bold">Past season game</h1>
+                </div>
+                <SignInPrompt
+                    title="Games from past seasons need an account"
+                    text="Create a free account to see the box scores of every past season."
+                />
+            </div>
+        );
+    }
     if (!game) return;
 
     // upcoming view only for games not played yet, finished games without stats are handled in GamePlayed

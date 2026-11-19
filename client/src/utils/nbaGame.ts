@@ -64,4 +64,13 @@ const gameTypeTag = (game_id: string) => {
     }
 };
 
-export { isPostseason, gameTypeTag, currentSeason, usTodayKey, usDayKey, isPlayed, isScoreMissing, gameDateTime, overtimeLabel, finalLabel, recordLabel };
+// season before the current one, the oldest season open without signing in
+const previousSeason = () => {
+    const startYear = Number(currentSeason().slice(0, 4)) - 1;
+    return `${startYear}-${String((startYear + 1) % 100).padStart(2, "0")}`;
+};
+
+// past seasons (before the previous one) need an account, the server checks the same rule
+const isLockedSeason = (season: string, signedIn: boolean) => !signedIn && season < previousSeason();
+
+export { previousSeason, isLockedSeason, isPostseason, gameTypeTag, currentSeason, usTodayKey, usDayKey, isPlayed, isScoreMissing, gameDateTime, overtimeLabel, finalLabel, recordLabel };

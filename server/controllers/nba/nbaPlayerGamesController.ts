@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import * as nbaPlayerGamesRepository from "../../repositories/nba/nbaPlayerGamesRepository.js";
 import { currentSeason } from "../../repositories/nba/nbaGamesRepository.js";
+import { allowSeason, seasonOfGameId } from "../../access.js";
 
 const SEASON_FORMAT = /^\d{4}-\d{2}$/;   // '2026-27'
 const MAX_LIMIT = 100;
@@ -15,6 +16,7 @@ const getPlayersGames = async (req: Request, res: Response) => {
     if (typeof season !== "string" || !SEASON_FORMAT.test(season)) {
         return res.status(400).json({ error: "Invalid season, expected format '2026-27'" });
     }
+    if (!allowSeason(req, res, season)) return;
     const games = await nbaPlayerGamesRepository.getPlayersGames(player_id, season);
     return res.status(200).json(games);
 };
@@ -54,6 +56,7 @@ const getGameBoxScore = async (req: Request, res: Response) => {
     if (!game_id) {
         return res.status(400).json({ error: "Missing game id" });
     }
+    if (!allowSeason(req, res, seasonOfGameId(game_id))) return;
     const boxScore = await nbaPlayerGamesRepository.getGameBoxScore(game_id);
     if (boxScore.length === 0) {
         return res.status(404).json({ error: "Box score not found" });

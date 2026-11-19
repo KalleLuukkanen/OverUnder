@@ -8,6 +8,9 @@ import type { NbaPlayer, NbaTeam } from "../../../types/nba";
 import PlayerSearch from "./PlayerSearch";
 import TeamSeasonGames from "./TeamSeasonGames";
 import PlayerSeasonGames from "./PlayerSeasonGames";
+import SignInPrompt from "../../../components/SignInPrompt";
+import { authClient } from "../../../utils/auth";
+import { isLockedSeason, previousSeason } from "../../../utils/nbaGame";
 
 type Mode = "team" | "player";
 
@@ -18,6 +21,10 @@ const selectClass = "px-3 py-2 bg-zinc-950 border border-zinc-700 rounded-lg tex
 function SeasonSearch() {
 
     const [mode, setMode] = useState<Mode>("team");
+
+    // seasons before the previous one need an account, they stay in the list with a lock
+    const { data: session } = authClient.useSession();
+    const signedIn = !!session;
 
     // every season with played games, latest first
     const [seasons, setSeasons] = useState<string[]>([]);
@@ -99,11 +106,15 @@ function SeasonSearch() {
     if (seasons.length === 0) return <p className="text-zinc-500">No seasons available</p>;
 
     const oldest = seasons[seasons.length - 1];
+    const locked = isLockedSeason(season, signedIn);
     const playerHasNoSeasons = mode === "player" && playerSeasons !== null && playerSeasons.length === 0;
 
     return (
         <div className="flex flex-col gap-4">
-            <p className="text-sm text-zinc-500">Every game of a team or a player from any season since {oldest}.</p>
+            <p className="text-sm text-zinc-500">
+                Every game of a team or a player from any season since {oldest}.
+                {!signedIn && ` Seasons before ${previousSeason()} need a free account.`}
+            </p>
             <div className="flex flex-wrap items-center gap-3">
                 <div className="flex gap-1 p-1 bg-zinc-950 border border-zinc-800 rounded-lg" role="group" aria-label="Search by">
                     {(["team", "player"] as Mode[]).map((m) => (
@@ -124,7 +135,9 @@ function SeasonSearch() {
                     aria-label="Season"
                     onChange={(e) => setSeason(e.target.value)}
                 >
-                    {seasonOptions.map((s) => <option key={s} value={s}>{s}</option>)}
+                    {seasonOptions.map((s) => (
+                        <option key={s} value={s}>{s}{isLockedSeason(s, signedIn) ? " 🔒" : ""}</option>
+                    ))}
                 </select>
                 {mode === "team" ?
                     <select
@@ -151,10 +164,16 @@ function SeasonSearch() {
                         <PlayerSearch onSelect={setPlayer} placeholder="Choose player..." className="w-full sm:w-72" />
                 }
             </div>
-            {mode === "team" && teamId !== null && season &&
+            {locked && (mode === "team" ? teamId !== null : player !== null) &&
+                <SignInPrompt
+                    title={`${season} is a past season`}
+                    text={`Create a free account to search every season since ${oldest}. ${previousSeason()} and the current season are open to everyone.`}
+                />
+            }
+            {!locked && mode === "team" && teamId !== null && season &&
                 <TeamSeasonGames team_id={teamId} season={season} />
             }
-            {mode === "player" && player && playerSeasons !== null && (
+            {!locked && mode === "player" && player && playerSeasons !== null && (
                 playerHasNoSeasons ?
                     <p className="text-zinc-500">No games of {player.name} in the seasons available</p> :
                     season && <PlayerSeasonGames player_id={player.id} season={season} />
