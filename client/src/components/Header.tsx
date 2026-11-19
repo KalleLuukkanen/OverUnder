@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { Link, NavLink } from "react-router-dom";
 import { LogIn, House, ChevronDown, Target } from "lucide-react";
 import { sports } from "../types/sports";
+import ThemeToggle from "./ThemeToggle";
 
 // onSelect closes the dropdown: the header stays mounted when moving between pages
 function LeagueList({ leagues, onSelect }: { leagues: string[], onSelect: () => void }) {
@@ -75,8 +76,9 @@ function Header() {
                         </li>
                     ))}
                 </ul>
+                <ThemeToggle className="ml-auto -mr-4" />
                 <Link
-                    className="ml-auto flex items-center gap-2 px-3 py-1.5 rounded-md text-zinc-300 hover:bg-zinc-800 hover:text-white"
+                    className="flex items-center gap-2 px-3 py-1.5 rounded-md text-zinc-300 hover:bg-zinc-800 hover:text-white"
                     to="/auth"
                     onClick={() => setOpenSport(null)}
                 >

@@ -126,7 +126,7 @@ function NBAPropChecker() {
                             {(["over", "under"] as NbaSide[]).map((s) => (
                                 <button
                                     key={s}
-                                    className={`flex-1 py-1.5 cursor-pointer capitalize ${side === s ? "bg-sky-500 text-white" : "bg-zinc-800 text-zinc-300 hover:bg-zinc-700"}`}
+                                    className={`flex-1 py-1.5 cursor-pointer capitalize ${side === s ? "bg-sky-500 text-on-accent" : "bg-zinc-800 text-zinc-300 hover:bg-zinc-700"}`}
                                     type="button"
                                     onClick={() => setSide(s)}
                                 >
@@ -171,7 +171,7 @@ function NBAPropChecker() {
                     </label>
                 }
                 <button
-                    className="mt-1 bg-sky-500 hover:bg-sky-400 text-white font-medium rounded-md px-4 py-2 cursor-pointer disabled:bg-zinc-700 disabled:text-zinc-400 disabled:cursor-not-allowed"
+                    className="mt-1 bg-sky-500 hover:bg-sky-400 text-on-accent font-medium rounded-md px-4 py-2 cursor-pointer disabled:bg-zinc-700 disabled:text-zinc-400 disabled:cursor-not-allowed"
                     type="submit"
                     disabled={!canCalculate}
                 >

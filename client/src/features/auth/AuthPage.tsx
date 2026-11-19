@@ -52,7 +52,7 @@ function AuthPage() {
                 value={password} onChange={(e) => setPassword(e.target.value)} required minLength={8} />
             {error && <p className="text-sm text-rose-400">{error}</p>}
             <button type="submit"
-                className="flex w-full items-center justify-center gap-2 rounded-md bg-sky-500 hover:bg-sky-400 px-4 py-2 font-medium text-white cursor-pointer">
+                className="flex w-full items-center justify-center gap-2 rounded-md bg-sky-500 hover:bg-sky-400 px-4 py-2 font-medium text-on-accent cursor-pointer">
                 {mode === "signup" ? <><UserPlus size={16} /> Sign up</> : <><LogIn size={16} /> Sign in</>}
             </button>
             <button type="button" className="w-full text-sm text-zinc-400 hover:text-zinc-200 underline cursor-pointer"
