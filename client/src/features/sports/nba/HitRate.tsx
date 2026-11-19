@@ -5,6 +5,7 @@ import { useState, useEffect } from "react";
 import { STATS } from "./hitRateStats";
 import HitRateResult from "./HitRateResult";
 import HitRateSplits from "./HitRateSplits";
+import AddToParlay from "../../parlays/AddToParlay";
 
 function HitRate({ team1_id, team2_id }: { team1_id: number, team2_id?: number }) {
 
@@ -213,6 +214,7 @@ function HitRate({ team1_id, team2_id }: { team1_id: number, team2_id?: number }
                     {result && resultPlayer !== null &&
                         <HitRateResult result={result}>
                             <HitRateSplits player_id={resultPlayer} result={result} opponent_id={opponent?.id} />
+                            <AddToParlay player_id={resultPlayer} stat={result.stat} line={result.line} side={result.side} />
                         </HitRateResult>
                     }
                 </div>

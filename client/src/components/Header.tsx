@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { Link, NavLink, useLocation } from "react-router-dom";
-import { LogIn, House, ChevronDown, Target, CircleUser } from "lucide-react";
+import { LogIn, House, ChevronDown, Target, CircleUser, Layers } from "lucide-react";
 import { sports } from "../types/sports";
 import ThemeToggle from "./ThemeToggle";
 import { authClient } from "../utils/auth";
@@ -65,6 +65,14 @@ function Header() {
                 >
                     <Target size={16} />
                     <span className="hidden sm:inline">Prop checker</span>
+                </NavLink>
+                <NavLink
+                    className={({ isActive }) => `flex items-center gap-1.5 -ml-4 px-3 py-1.5 rounded-md hover:bg-zinc-800 hover:text-white ${isActive ? "bg-zinc-800 text-white" : "text-zinc-300"}`}
+                    to="/parlays"
+                    onClick={() => setOpenSport(null)}
+                >
+                    <Layers size={16} />
+                    <span className="hidden sm:inline">Parlays</span>
                 </NavLink>
                 <ul className="flex items-center gap-1" ref={navRef}>
                     {Object.entries(sports).map(([sport, leagues]) => (

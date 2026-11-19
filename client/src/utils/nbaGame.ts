@@ -21,7 +21,7 @@ const isScoreMissing = (game: NbaGame) =>
 
 // date and tip-off time in the viewer's own time zone, e.g. '18.11.2026 klo 2.30'
 // without a start time only the date is known, shown as the US date
-const gameDateTime = (game: NbaGame) => {
+const gameDateTime = (game: Pick<NbaGame, "game_date" | "start_time">) => {
     if (!game.start_time) return new Date(game.game_date).toLocaleDateString("fi-FI");
     const start = new Date(game.start_time);
     const day = start.toLocaleDateString("fi-FI");

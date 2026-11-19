@@ -227,3 +227,43 @@ export type NbaPlayerCareer = {
     regular: NbaPlayerCareerPart;
     playoffs: NbaPlayerCareerPart;
 };
+
+// a member's parlay leg: pending until its game is played, no_game if the player had no game scheduled,
+// void = the player didn't play, push = exactly on the line
+export type ParlayLegStatus = "pending" | "no_game" | "hit" | "miss" | "push" | "void";
+
+export type ParlayLeg = {
+    id: number;
+    parlay_id: number;
+    player_id: number;
+    player_name: string;
+    stat: NbaStat;
+    line: number;
+    side: NbaSide;
+    game: {
+        id: string;
+        game_date: string;
+        start_time: string | null;
+        is_home: boolean;
+        opponent: string;
+        opponent_id: number;
+    } | null;
+    status: ParlayLegStatus;
+    value: number | null;          // the stat in the graded game
+    minutes: number | null;
+    hit_rates: {
+        last5: NbaHitRateSplit | null;
+        last10: NbaHitRateSplit | null;
+        season: NbaHitRateSplit | null;
+        opponent: NbaHitRateSplit | null;
+    };
+};
+
+export type Parlay = {
+    id: number;
+    name: string;
+    odds: number | null;           // bookmaker's decimal odds, optional
+    created_at: string;
+    status: "empty" | "pending" | "won" | "lost" | "void";
+    legs: ParlayLeg[];
+};

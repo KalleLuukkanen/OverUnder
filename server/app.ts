@@ -7,6 +7,7 @@ import * as nbaGamesController from "./controllers/nba/nbaGamesController.js";
 import * as nbaTeamsController from "./controllers/nba/nbaTeamsController.js";
 import * as nbaPlayersController from "./controllers/nba/nbaPlayersController.js";
 import * as nbaPlayerGamesController from "./controllers/nba/nbaPlayerGamesController.js";
+import * as parlayController from "./controllers/parlayController.js";
 
 const app = express();
 
@@ -88,5 +89,14 @@ app.post("/api/nba/players/:playerId/hit-rate", nbaPlayerGamesController.getHitR
 app.post("/api/nba/players/:playerId/hit-rate/splits", nbaPlayerGamesController.getHitRateSplits);
 app.post("/api/nba/players/:playerId/vs/:opponentId/games", nbaPlayerGamesController.getPlayersLastGamesVsOpponent);
 app.post("/api/nba/players/:playerId/vs/:opponentId/hit-rate", nbaPlayerGamesController.getHitRate);
+
+// parlays: member feature, every route needs a session and only touches the user's own parlays
+app.use("/api/parlays", parlayController.requireUser);
+app.get("/api/parlays", parlayController.getParlays);
+app.post("/api/parlays", parlayController.createParlay);
+app.patch("/api/parlays/:parlayId", parlayController.updateParlay);
+app.delete("/api/parlays/:parlayId", parlayController.deleteParlay);
+app.post("/api/parlays/:parlayId/legs", parlayController.addLeg);
+app.delete("/api/parlays/:parlayId/legs/:legId", parlayController.deleteLeg);
 
 export default app;

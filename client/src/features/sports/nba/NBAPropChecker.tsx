@@ -7,6 +7,7 @@ import { X } from "lucide-react";
 import PlayerSearch from "./PlayerSearch";
 import HitRateResult from "./HitRateResult";
 import HitRateSplits from "./HitRateSplits";
+import AddToParlay from "../../parlays/AddToParlay";
 import { STATS } from "./hitRateStats";
 import { gameDateTime } from "../../../utils/nbaGame";
 
@@ -190,6 +191,7 @@ function NBAPropChecker() {
                 {result && player ?
                     <HitRateResult result={result}>
                         <HitRateSplits player_id={player.id} result={result} opponent_id={nextOpponent?.id} />
+                        <AddToParlay player_id={player.id} stat={result.stat} line={result.line} side={result.side} />
                     </HitRateResult> :
                     !errorMessage &&
                     <div className="flex flex-col gap-2 text-zinc-500">

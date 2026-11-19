@@ -31,8 +31,18 @@ const get = <T>(path: string) => request<T>(path);
 const post = <T>(path: string, body: object = {}) =>
     request<T>(path, { method: "POST", body: JSON.stringify(body) });
 
+// PATCH request, changes part of a resource
+const patch = <T>(path: string, body: object = {}) =>
+    request<T>(path, { method: "PATCH", body: JSON.stringify(body) });
+
+// DELETE request
+const del = <T>(path: string) =>
+    request<T>(path, { method: "DELETE" });
+
 export {
     request,
     get,
     post,
+    patch,
+    del,
 };
