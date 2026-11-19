@@ -57,7 +57,7 @@ function NBAPlayer() {
                         <span className="text-zinc-400">
                             {player.team_id !== null && player.team_name ?
                                 <Link className="hover:text-sky-400 hover:underline" to={`/nba/team/${player.team_id}`}>{player.team_name}</Link> :
-                                "Free agent"
+                                player.retired ? "Retired" : "Free agent"
                             }
                             {[player.position, player.jersey && `#${player.jersey}`].filter(Boolean).map((part) => ` · ${part}`).join("")}
                         </span>

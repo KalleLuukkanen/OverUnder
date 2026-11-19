@@ -2,6 +2,7 @@ import NBAInfo from "../features/sports/nba/NBAInfo";
 import NBASeasonPastGames from "../features/sports/nba/NBASeasonPastGames";
 import PlayerSearch from "../features/sports/nba/PlayerSearch";
 import TeamList from "../features/sports/nba/TeamList";
+import SeasonSearch from "../features/sports/nba/SeasonSearch";
 import { useState } from "react";
 import { ChevronDown } from "lucide-react";
 import { currentSeason } from "../utils/nbaGame";
@@ -32,6 +33,7 @@ function NBAPage() {
 
     const [showingUpcoming, setShowingUpcoming] = useState(false);
     const [showingPast, setShowingPast] = useState(false);
+    const [showingSearch, setShowingSearch] = useState(false);
 
     return (
         <div className="flex flex-col gap-4">
@@ -45,6 +47,9 @@ function NBAPage() {
             </CollapsibleSection>
             <CollapsibleSection title="Past games" note={`${currentSeason()} season`} open={showingPast} onToggle={() => setShowingPast(!showingPast)}>
                 <NBASeasonPastGames />
+            </CollapsibleSection>
+            <CollapsibleSection title="Season search" note="past seasons" open={showingSearch} onToggle={() => setShowingSearch(!showingSearch)}>
+                <SeasonSearch />
             </CollapsibleSection>
         </div>
     )

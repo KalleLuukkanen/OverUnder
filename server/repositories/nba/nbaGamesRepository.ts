@@ -9,17 +9,18 @@ const currentSeason = () => {
     return `${startYear}-${String((startYear + 1) % 100).padStart(2, "0")}`;
 };
 
-// columns + joins shared by every query: game info with both teams' abbreviations and names
+// columns shared by every query: game info with both teams' abbreviations and names
+// names are the ones of the game's season (an 2007 game is SEA, not OKC)
 // home_score and away_score are null for games not played yet
 const gamesWithTeams = () => sql`
     SELECT
         g.id, g.game_date, g.start_time, g.season,
-        g.home_team_id, home.abbreviation AS home_team, home.name AS home_team_name,
-        g.away_team_id, away.abbreviation AS away_team, away.name AS away_team_name,
+        g.home_team_id, nba_team_abbreviation(g.home_team_id, g.season) AS home_team,
+        nba_team_name(g.home_team_id, g.season) AS home_team_name,
+        g.away_team_id, nba_team_abbreviation(g.away_team_id, g.season) AS away_team,
+        nba_team_name(g.away_team_id, g.season) AS away_team_name,
         g.home_score, g.away_score, g.overtime_periods
     FROM nba_game g
-    JOIN nba_team home ON home.id = g.home_team_id
-    JOIN nba_team away ON away.id = g.away_team_id
 `;
 
 // get one game based on id
@@ -136,13 +137,25 @@ const getHeadToHeadGames = async (team_id: number, opponent_id: number) => {
     return result;
 };
 
+// seasons that have played games, latest first ('2026-27', '2025-26', ...)
+const getSeasons = async () => {
+    const result = await sql`
+        SELECT DISTINCT season
+        FROM nba_game
+        WHERE home_score IS NOT NULL
+        ORDER BY season DESC;
+    `;
+    return result.map((r) => r.season as string);
+};
+
 // quarter scores, team stats and season record after the game for both teams, away team first
 const getGameTeamStats = async (game_id: string) => {
     const result = await sql`
-        SELECT tg.*, t.abbreviation AS team, t.name AS team_name, (tg.team_id = g.home_team_id) AS is_home
+        SELECT tg.*,
+            nba_team_abbreviation(tg.team_id, g.season) AS team, nba_team_name(tg.team_id, g.season) AS team_name,
+            (tg.team_id = g.home_team_id) AS is_home
         FROM nba_team_game tg
         JOIN nba_game g ON g.id = tg.game_id
-        JOIN nba_team t ON t.id = tg.team_id
         WHERE tg.game_id = ${game_id}
         ORDER BY is_home;
     `;
@@ -150,6 +163,7 @@ const getGameTeamStats = async (game_id: string) => {
 };
 
 export {
+    getSeasons,
     getGameTeamStats,
     currentSeason,
     getOne,

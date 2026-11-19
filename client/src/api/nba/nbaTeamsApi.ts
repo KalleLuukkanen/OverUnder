@@ -2,8 +2,9 @@ import { get, post } from "../apiClient";
 import type { NbaRosterPlayer, NbaTeam } from "../../types/nba";
 
 // get all teams, alphabetically
-const getAll = () =>
-    get<NbaTeam[]>("/api/nba/teams");
+// with a season ('2007-08'): only that season's teams, with their names back then
+const getAll = (season?: string) =>
+    get<NbaTeam[]>(season ? `/api/nba/teams?season=${encodeURIComponent(season)}` : "/api/nba/teams");
 
 // get one team based on id
 const getOne = (teamId: number) =>

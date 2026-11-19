@@ -83,6 +83,7 @@ export type NbaPlayer = {
     draft_round: number | null;     // null with a draft_year = undrafted
     draft_number: number | null;
     from_year: number | null;
+    retired: boolean;               // no team and no games in the current or previous season
 };
 
 // player in team's roster, averages are null if no games played this season

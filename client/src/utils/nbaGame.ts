@@ -52,4 +52,16 @@ const currentSeason = () => {
     return `${startYear}-${String((startYear + 1) % 100).padStart(2, "0")}`;
 };
 
-export { currentSeason, usTodayKey, usDayKey, isPlayed, isScoreMissing, gameDateTime, overtimeLabel, finalLabel, recordLabel };
+// game type from the game id's 3rd digit: regular season (incl. the NBA Cup final) or playoffs (incl. play-in)
+const isPostseason = (game_id: string) => game_id[2] === "4" || game_id[2] === "5";
+
+// small tag for the games that aren't ordinary regular season / playoff games, '' otherwise
+const gameTypeTag = (game_id: string) => {
+    switch (game_id[2]) {
+        case "5": return "Play-in";
+        case "6": return "Cup final";
+        default: return "";
+    }
+};
+
+export { isPostseason, gameTypeTag, currentSeason, usTodayKey, usDayKey, isPlayed, isScoreMissing, gameDateTime, overtimeLabel, finalLabel, recordLabel };

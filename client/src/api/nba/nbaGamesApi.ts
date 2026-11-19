@@ -1,6 +1,10 @@
 import { get, post } from "../apiClient";
 import type { NbaGame, NbaTeamGameStats } from "../../types/nba";
 
+// seasons that have played games, latest first ('2026-27', '2025-26', ...)
+const getSeasons = () =>
+    get<string[]>("/api/nba/seasons");
+
 // get one game based on id
 const getOne = (gameId: string) =>
     get<NbaGame>(`/api/nba/games/${gameId}`);
@@ -50,6 +54,7 @@ const getGameTeamStats = (gameId: string) =>
     get<NbaTeamGameStats[]>(`/api/nba/games/${gameId}/team-stats`);
 
 export {
+    getSeasons,
     getGameTeamStats,
     getOne,
     getUpcomingGames,

@@ -38,7 +38,7 @@ const draft = (player: NbaPlayer) => {
 function PlayerInfo({ player }: { player: NbaPlayer }) {
 
     const rows: [string, string | null][] = [
-        ["Team", player.team_name],
+        ["Team", player.team_name ?? (player.retired ? "Retired" : "Free agent")],
         ["Jersey", player.jersey && `#${player.jersey}`],
         ["Position", player.position && positionName(player.position)],
         ["Height", player.height_inches === null ? null : height(player.height_inches)],

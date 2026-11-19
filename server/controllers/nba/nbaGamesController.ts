@@ -123,7 +123,14 @@ const getGameTeamStats = async (req: Request, res: Response) => {
     return res.status(200).json(stats);
 };
 
+// seasons that have played games, latest first
+const getSeasons = async (req: Request, res: Response) => {
+    const seasons = await nbaGamesRepository.getSeasons();
+    return res.status(200).json(seasons);
+};
+
 export {
+    getSeasons,
     getGameTeamStats,
     getOne,
     getUpcomingGames,

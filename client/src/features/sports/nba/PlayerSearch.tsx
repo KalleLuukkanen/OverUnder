@@ -148,7 +148,7 @@ function PlayerSearch({ onSelect, placeholder = "Search player...", className = 
                                 onClick={() => openPlayer(p)}
                             >
                                 {p.name}
-                                {p.team && <span className="ml-auto text-sm text-zinc-500">{p.team}</span>}
+                                <span className="ml-auto text-sm text-zinc-500">{p.team ?? (p.retired ? "Retired" : "")}</span>
                             </button>
                         </li>
                     ))}

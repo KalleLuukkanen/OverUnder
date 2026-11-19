@@ -5,6 +5,7 @@ Load NBA player box scores (and the upcoming schedule) from the Kaggle dataset
 Everything is upserted, so re-running is safe:
     python -m collectors.nba_collector                     # current + previous season
     python -m collectors.nba_collector --seasons 2026-27   # just the current season (daily refresh)
+    python -m collectors.nba_collector --since 1996-97     # every season from 1996-97 to now (backfill)
 
 Env vars:
     KAGGLE_USERNAME, KAGGLE_KEY (or KAGGLE_API_TOKEN) - read by kagglehub
@@ -41,6 +42,25 @@ TEAM_BY_NICKNAME = {
     for tid, (_, name) in TEAMS.items()
     for i in range(1, len(name.split()))
 }
+# old nicknames of franchises that have since moved or renamed
+TEAM_BY_NICKNAME.update({
+    "SuperSonics": 1610612760,  # Seattle -> Oklahoma City 2008
+    "Bobcats": 1610612766,      # Charlotte 2004-2014
+    "Bullets": 1610612764,      # Washington, renamed Wizards 1997
+})
+NEW_ORLEANS_HORNETS = range(2002, 2013)  # season start years when 'Hornets' meant New Orleans
+
+# abbreviations of old team names, any other name uses the team's current abbreviation
+OLD_ABBREVIATIONS = {
+    "Seattle SuperSonics": "SEA",
+    "New Jersey Nets": "NJN",
+    "Vancouver Grizzlies": "VAN",
+    "Charlotte Bobcats": "CHA",
+    "New Orleans Hornets": "NOH",
+    "New Orleans/Oklahoma City Hornets": "NOK",
+    "Oklahoma City Hornets": "NOK",  # the dataset's name for New Orleans' Katrina seasons 2005-07
+    "Washington Bullets": "WAS",
+}
 
 
 # ---------- seasons ----------
@@ -72,6 +92,22 @@ def game_season(game_id: str) -> str:
 
 def wanted(game_id: str, seasons: set[str]) -> bool:
     return game_id[2] in INCLUDED_GAME_TYPES and game_season(game_id) in seasons
+
+
+def team_from_nickname(nickname: str, season: str) -> int:
+    """Team id from a nickname ('Lakers'), 0 if unknown. 'Hornets' was New Orleans 2002-2013, Charlotte otherwise."""
+    nickname = nickname.strip()
+    if nickname == "Hornets" and int(season[:4]) in NEW_ORLEANS_HORNETS:
+        return 1610612740
+    return TEAM_BY_NICKNAME.get(nickname, 0)
+
+
+def team_abbreviation(team_id: int, name: str, season: str) -> str:
+    """Abbreviation of the team's name in that season ('Seattle SuperSonics' -> 'SEA')."""
+    # the original Charlotte Hornets (until 2002) went by CHH, today's Hornets are CHA
+    if name == "Charlotte Hornets" and season < "2002-03":
+        return "CHH"
+    return OLD_ABBREVIATIONS.get(name, TEAMS[team_id][0])
 
 
 # ---------- parsing ----------
@@ -142,7 +178,7 @@ def add_to_season_totals(totals: dict, game_id: str, r: dict) -> None:
     for s in TOTAL_STATS:
         t[s] += stats[s]
     # remember when the player first played for each team, to list teams in order
-    team_id = to_int(r["playerteamId"]) or TEAM_BY_NICKNAME.get(r["playerteamName"].strip(), 0)
+    team_id = to_int(r["playerteamId"]) or team_from_nickname(r["playerteamName"], game_season(game_id))
     day = r["gameDateTimeEst"][:10]
     if team_id in TEAMS and (team_id not in t["first_game"] or day < t["first_game"][team_id]):
         t["first_game"][team_id] = day
@@ -198,18 +234,20 @@ def read_players() -> list[dict]:
     return players
 
 
-def read_box_scores(seasons: set[str]) -> tuple[list[dict], list[dict]]:
-    """Box scores of the given seasons + season totals of every season in the dataset."""
+def read_box_scores(path: str, seasons: set[str]) -> tuple[list[dict], list[dict]]:
+    """Box scores of the given seasons + season totals of every season in the dataset (PlayerStatistics.csv)."""
     rows = []
     totals: dict = {}
     skipped_dnp = 0
-    with download("PlayerStatistics.csv") as path, open(path, newline="", encoding="utf-8") as fh:
+    with open(path, newline="", encoding="utf-8") as fh:
         for r in csv.DictReader(fh):
             game_id = normalize_game_id(r["gameId"])
             add_to_season_totals(totals, game_id, r)
             if not wanted(game_id, seasons):
                 continue
-            team_id, opp_id = to_int(r["playerteamId"]), to_int(r["opponentteamId"])
+            season = game_season(game_id)
+            team_id = to_int(r["playerteamId"]) or team_from_nickname(r.get("playerteamName", ""), season)
+            opp_id = to_int(r["opponentteamId"]) or team_from_nickname(r.get("opponentteamName", ""), season)
             if team_id not in TEAMS or opp_id not in TEAMS or not r["gameDateTimeEst"]:
                 continue
             minutes = parse_minutes(r["numMinutes"])
@@ -223,7 +261,7 @@ def read_box_scores(seasons: set[str]) -> tuple[list[dict], list[dict]]:
                 "game_id": game_id,
                 "game_date": date.fromisoformat(r["gameDateTimeEst"][:10]),
                 "start_time": start_time(r["gameDateTimeEst"]),
-                "season": game_season(game_id),
+                "season": season,
                 "team_id": team_id,
                 "opponent_id": opp_id,
                 "home_team_id": team_id if is_home else opp_id,
@@ -281,10 +319,12 @@ def opt_count(value: str) -> int | None:
         return None
 
 
-def read_team_stats(seasons: set[str]) -> list[dict]:
-    """Quarter scores, team totals and season records of the given seasons' played games."""
+def read_team_stats(path: str, seasons: set[str]) -> tuple[list[dict], list[dict]]:
+    """Quarter scores, team totals and season records of the given seasons' played games (TeamStatistics.csv),
+    + every team's name in each of those seasons ('Seattle SuperSonics' in 2007-08)."""
     rows = []
-    with download("TeamStatistics.csv") as path, open(path, newline="", encoding="utf-8") as fh:
+    names: dict[tuple[int, str], str] = {}
+    with open(path, newline="", encoding="utf-8") as fh:
         for r in csv.DictReader(fh):
             game_id = normalize_game_id(r["gameId"])
             team_id = opt_count(r["teamId"])
@@ -294,8 +334,16 @@ def read_team_stats(seasons: set[str]) -> list[dict]:
             for src, col in TEAM_GAME_COLUMNS.items():
                 row[col] = opt_count(r.get(src, ""))
             rows.append(row)
-    print(f"  {len(rows)} team game lines")
-    return rows
+            name = f"{r.get('teamCity', '').strip()} {r.get('teamName', '').strip()}".strip()
+            if name:
+                names[(team_id, game_season(game_id))] = name
+    team_seasons = [
+        {"team_id": tid, "season": season, "name": name, "abbreviation": team_abbreviation(tid, name, season)}
+        for (tid, season), name in names.items()
+    ]
+    old = sorted({f"{t['abbreviation']} {t['name']}" for t in team_seasons if t["name"] != TEAMS[t["team_id"]][1]})
+    print(f"  {len(rows)} team game lines, names differing from today: {', '.join(old) or 'none'}")
+    return rows, team_seasons
 
 
 def read_schedule(season: str) -> list[dict]:
@@ -307,6 +355,10 @@ def read_schedule(season: str) -> list[dict]:
             raw = list(csv.DictReader(fh))
     except Exception as e:
         print(f"  no schedule file {name} ({e.__class__.__name__}), skipping")
+        return []
+    # older seasons' files use other column names, their played games come from the box scores anyway
+    if raw and not {"gameId", "homeTeamId", "awayTeamId", "gameDateTimeEst"} <= raw[0].keys():
+        print(f"  schedule file {name} has an unknown format ({', '.join(list(raw[0].keys())[:8])}...), skipping")
         return []
     games = []
     for r in raw:
@@ -390,12 +442,18 @@ def upsert_box_scores(cur: psycopg.Cursor, rows: list[dict]) -> None:
     upsert_games(cur, list(games.values()))
 
     # rows are sorted by date, so the last one wins = player's latest team
-    players = {r["player_id"]: (r["player_id"], r["player_name"], r["team_id"]) for r in rows}
+    # only current and previous season games set a team: a backfill of old seasons must not move
+    # today's players back to their old teams, and long retired players are left without a team
+    recent = previous_season(current_season())
+    players = {
+        r["player_id"]: (r["player_id"], r["player_name"], r["team_id"] if r["season"] >= recent else None)
+        for r in rows
+    }
     cur.executemany(
         """
         INSERT INTO nba_player (id, name, team_id)
         VALUES (%s, %s, %s)
-        ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, team_id = EXCLUDED.team_id
+        ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, team_id = COALESCE(EXCLUDED.team_id, nba_player.team_id)
         """,
         list(players.values()),
     )
@@ -464,6 +522,18 @@ def update_player_info(cur: psycopg.Cursor, players: list[dict]) -> None:
     print("  updated player bios")
 
 
+def upsert_team_seasons(cur: psycopg.Cursor, team_seasons: list[dict]) -> None:
+    cur.executemany(
+        """
+        INSERT INTO nba_team_season (team_id, season, abbreviation, name)
+        VALUES (%(team_id)s, %(season)s, %(abbreviation)s, %(name)s)
+        ON CONFLICT (team_id, season) DO UPDATE SET abbreviation = EXCLUDED.abbreviation, name = EXCLUDED.name
+        """,
+        team_seasons,
+    )
+    print(f"  saved {len(team_seasons)} team season names")
+
+
 def upsert_team_stats(cur: psycopg.Cursor, rows: list[dict]) -> None:
     # only games that exist in nba_game (schedule + box scores), the foreign key would reject others
     cur.execute("SELECT id FROM nba_game")
@@ -482,22 +552,35 @@ def upsert_team_stats(cur: psycopg.Cursor, rows: list[dict]) -> None:
     print(f"  saved {len(rows)} team game lines")
 
 
-def sync(seasons: list[str]) -> None:
-    season_set = set(seasons)
-    box_scores, season_totals = read_box_scores(season_set)
+def sync(seasons: list[str], chunk_size: int = 0) -> None:
+    """Sync the given seasons. With chunk_size, seasons are read and saved a few at a time (oldest first)
+    so a long backfill doesn't hold every box score in memory, the files are still downloaded only once."""
+    seasons = sorted(set(seasons))
+    chunks = [seasons[i:i + chunk_size] for i in range(0, len(seasons), chunk_size)] if chunk_size else [seasons]
     players = read_players()
-    team_stats = read_team_stats(season_set)
-    schedule = [g for s in sorted(season_set) for g in read_schedule(s)]
 
-    with psycopg.connect() as conn:  # connection params from PG* env vars
-        with conn.cursor() as cur:
-            upsert_teams(cur)
-            upsert_games(cur, schedule)
-            upsert_box_scores(cur, box_scores)
-            upsert_season_totals(cur, season_totals)
-            update_player_info(cur, players)
-            upsert_team_stats(cur, team_stats)
-        conn.commit()
+    with download("PlayerStatistics.csv") as box_path, download("TeamStatistics.csv") as team_path:
+        for i, chunk in enumerate(chunks):
+            if len(chunks) > 1:
+                print(f"Seasons {chunk[0]} - {chunk[-1]} ({i + 1}/{len(chunks)})")
+            season_set = set(chunk)
+            box_scores, season_totals = read_box_scores(box_path, season_set)
+            team_stats, team_seasons = read_team_stats(team_path, season_set)
+            schedule = [g for s in chunk for g in read_schedule(s)]
+
+            with psycopg.connect() as conn:  # connection params from PG* env vars
+                with conn.cursor() as cur:
+                    upsert_teams(cur)
+                    upsert_games(cur, schedule)
+                    upsert_box_scores(cur, box_scores)
+                    # totals cover every season in the dataset, saving them once is enough
+                    if i == 0:
+                        upsert_season_totals(cur, season_totals)
+                    update_player_info(cur, players)
+                    upsert_team_seasons(cur, team_seasons)
+                    upsert_team_stats(cur, team_stats)
+                conn.commit()
+            del box_scores, season_totals, team_stats
 
 
 def main() -> None:
@@ -509,9 +592,18 @@ def main() -> None:
         default=[previous_season(cur_season), cur_season],
         help="e.g. 2025-26 2026-27 (default: previous + current season)",
     )
+    parser.add_argument(
+        "--since",
+        help="sync every season from this one to the current, 5 at a time, e.g. 1996-97 (overrides --seasons)",
+    )
     args = parser.parse_args()
-    print(f"Syncing seasons: {', '.join(args.seasons)}")
-    sync(args.seasons)
+    if args.since:
+        seasons = [season_string(y) for y in range(int(args.since[:4]), int(cur_season[:4]) + 1)]
+        print(f"Syncing seasons {seasons[0]} - {seasons[-1]}")
+        sync(seasons, chunk_size=5)
+    else:
+        print(f"Syncing seasons: {', '.join(args.seasons)}")
+        sync(args.seasons)
     print("Done.")
 
 

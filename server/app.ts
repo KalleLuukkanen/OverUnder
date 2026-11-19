@@ -52,6 +52,9 @@ app.get("/api/me", (req, res) => {
 // NBA routes. Routes that read req.body are POST, because browsers can't send a body with GET.
 // Specific paths (/upcoming, /date...) must come before /:gameId.
 
+// seasons
+app.get("/api/nba/seasons", nbaGamesController.getSeasons);
+
 // games
 app.get("/api/nba/games/upcoming", nbaGamesController.getUpcomingGames);
 app.post("/api/nba/games/date", nbaGamesController.getGamesByDate);

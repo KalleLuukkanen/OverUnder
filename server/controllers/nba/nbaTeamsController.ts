@@ -1,9 +1,19 @@
 import { Request, Response } from "express";
 import * as nbaTeamsRepository from "../../repositories/nba/nbaTeamsRepository.js";
 
-// get all teams
+const SEASON_FORMAT = /^\d{4}-\d{2}$/;
+
+// get all teams, with ?season=2007-08 only the teams of that season with their names back then
 const getAll = async (req: Request, res: Response) => {
-    const teams = await nbaTeamsRepository.getAll();
+    const season = req.query.season;
+    if (season === undefined) {
+        const teams = await nbaTeamsRepository.getAll();
+        return res.status(200).json(teams);
+    }
+    if (typeof season !== "string" || !SEASON_FORMAT.test(season)) {
+        return res.status(400).json({ error: "Invalid season, expected format '2026-27'" });
+    }
+    const teams = await nbaTeamsRepository.getSeasonTeams(season);
     return res.status(200).json(teams);
 };
 

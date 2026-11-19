@@ -1,16 +1,30 @@
 import postgres from "postgres";
+import { currentSeason } from "./nbaGamesRepository.js";
 
 const sql = postgres();
 
+// season before the current one ('2026-27' -> '2025-26')
+const previousSeason = () => {
+    const startYear = Number(currentSeason().slice(0, 4)) - 1;
+    return `${startYear}-${String((startYear + 1) % 100).padStart(2, "0")}`;
+};
+
 // columns + join shared by every query: player info with current team's abbreviation and name
 // birth_date as text 'yyyy-mm-dd' so it isn't shifted by time zones
+// retired = no team and no games in the current or previous season (a free agent has played recently)
 const playersWithTeam = () => sql`
     SELECT
         p.id, p.name,
         p.team_id, t.abbreviation AS team, t.name AS team_name,
         p.birth_date::text AS birth_date, p.country, p.school,
         p.height_inches, p.weight_lbs, p.jersey, p.position,
-        p.draft_year, p.draft_round, p.draft_number, p.from_year
+        p.draft_year, p.draft_round, p.draft_number, p.from_year,
+        (p.team_id IS NULL AND NOT EXISTS (
+            SELECT 1
+            FROM nba_player_game pg
+            JOIN nba_game g ON g.id = pg.game_id
+            WHERE pg.player_id = p.id AND g.season >= ${previousSeason()}
+        )) AS retired
     FROM nba_player p
     LEFT JOIN nba_team t ON t.id = p.team_id
 `;

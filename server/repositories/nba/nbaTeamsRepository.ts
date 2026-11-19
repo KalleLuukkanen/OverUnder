@@ -13,6 +13,17 @@ const getAll = async () => {
     return result;
 };
 
+// teams that played in given season, with that season's abbreviations and names, alphabetically
+const getSeasonTeams = async (season: string) => {
+    const result = await sql`
+        SELECT ts.team_id AS id, ts.abbreviation, ts.name
+        FROM nba_team_season ts
+        WHERE ts.season = ${season}
+        ORDER BY ts.name;
+    `;
+    return result;
+};
+
 // get one team based on id, with its current regular season record (wins/losses null before its first game)
 // record = from the team's latest regular season game this season (game type '2' in the id)
 const getOne = async (team_id: number) => {
@@ -68,6 +79,7 @@ const getRoster = async (team_id: number) => {
 };
 
 export {
+    getSeasonTeams,
     getAll,
     getOne,
     getByAbbreviation,

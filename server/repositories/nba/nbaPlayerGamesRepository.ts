@@ -27,20 +27,19 @@ const STATS: Record<string, string> = {
 const isStat = (stat: string) => Object.hasOwn(STATS, stat);
 
 // columns + joins shared by every query: box score line with game date, player name and team abbreviations
+// (abbreviations of the game's season)
 const boxScores = () => sql`
     SELECT
         pg.player_id, p.name AS player_name,
         pg.game_id, g.game_date, g.season, g.overtime_periods,
-        pg.team_id, t.abbreviation AS team,
-        pg.opponent_id, o.abbreviation AS opponent,
+        pg.team_id, nba_team_abbreviation(pg.team_id, g.season) AS team,
+        pg.opponent_id, nba_team_abbreviation(pg.opponent_id, g.season) AS opponent,
         pg.is_home, pg.minutes::float8 AS minutes,
         pg.pts, pg.reb, pg.ast, pg.stl, pg.blk, pg.tov,
         pg.fgm, pg.fga, pg.fg3m, pg.fg3a, pg.ftm, pg.fta
     FROM nba_player_game pg
     JOIN nba_game g ON g.id = pg.game_id
     JOIN nba_player p ON p.id = pg.player_id
-    JOIN nba_team t ON t.id = pg.team_id
-    JOIN nba_team o ON o.id = pg.opponent_id
 `;
 
 // get player's all games from given season, latest first
@@ -80,7 +79,7 @@ const getGameBoxScore = async (game_id: string) => {
     const result = await sql`
         ${boxScores()}
         WHERE pg.game_id = ${game_id}
-        ORDER BY t.abbreviation, pg.minutes DESC;
+        ORDER BY team, pg.minutes DESC;
     `;
     return result;
 };
