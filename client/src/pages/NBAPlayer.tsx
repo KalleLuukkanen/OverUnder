@@ -1,4 +1,4 @@
-import { useParams } from "react-router-dom";
+import { useParams, Link } from "react-router-dom";
 import BackButton from "../components/BackButton";
 import Loading from "../components/Loading";
 import PlayerRecentGames from "../features/sports/nba/PlayerRecentGames";
@@ -55,7 +55,11 @@ function NBAPlayer() {
                     <div className="flex flex-col">
                         <h1 className="text-3xl font-bold">{player.name}</h1>
                         <span className="text-zinc-400">
-                            {[player.team_name ?? "Free agent", player.position, player.jersey && `#${player.jersey}`].filter(Boolean).join(" · ")}
+                            {player.team_id !== null && player.team_name ?
+                                <Link className="hover:text-sky-400 hover:underline" to={`/nba/team/${player.team_id}`}>{player.team_name}</Link> :
+                                "Free agent"
+                            }
+                            {[player.position, player.jersey && `#${player.jersey}`].filter(Boolean).map((part) => ` · ${part}`).join("")}
                         </span>
                     </div>
                 </div>

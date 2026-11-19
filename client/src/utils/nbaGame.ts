@@ -45,4 +45,11 @@ const finalLabel = (periods: number | null) => {
 const recordLabel = (wins: number | null | undefined, losses: number | null | undefined) =>
     wins === null || wins === undefined || losses === null || losses === undefined ? "" : `${wins}-${losses}`;
 
-export { usTodayKey, usDayKey, isPlayed, isScoreMissing, gameDateTime, overtimeLabel, finalLabel, recordLabel };
+// current season as '2026-27', a new season starts in October (same rule as the server)
+const currentSeason = () => {
+    const today = new Date();
+    const startYear = today.getMonth() >= 9 ? today.getFullYear() : today.getFullYear() - 1;
+    return `${startYear}-${String((startYear + 1) % 100).padStart(2, "0")}`;
+};
+
+export { currentSeason, usTodayKey, usDayKey, isPlayed, isScoreMissing, gameDateTime, overtimeLabel, finalLabel, recordLabel };

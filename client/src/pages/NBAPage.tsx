@@ -1,12 +1,15 @@
 import NBAInfo from "../features/sports/nba/NBAInfo";
 import NBASeasonPastGames from "../features/sports/nba/NBASeasonPastGames";
 import PlayerSearch from "../features/sports/nba/PlayerSearch";
+import TeamList from "../features/sports/nba/TeamList";
 import { useState } from "react";
 import { ChevronDown } from "lucide-react";
+import { currentSeason } from "../utils/nbaGame";
 
 // panel with a title button that opens and closes its content
-function CollapsibleSection({ title, open, onToggle, children }:
-    { title: string, open: boolean, onToggle: () => void, children: React.ReactNode }) {
+// note is a small muted text after the title
+function CollapsibleSection({ title, note, open, onToggle, children }:
+    { title: string, note?: string, open: boolean, onToggle: () => void, children: React.ReactNode }) {
     return (
         <section className="bg-zinc-900 border border-zinc-800 rounded-xl">
             <button
@@ -14,7 +17,10 @@ function CollapsibleSection({ title, open, onToggle, children }:
                 type="button"
                 onClick={onToggle}
             >
-                {title}
+                <span>
+                    {title}
+                    {note && <span className="ml-2 text-sm font-normal text-zinc-500">{note}</span>}
+                </span>
                 <ChevronDown size={20} className={`text-zinc-500 transition-transform ${open ? "" : "-rotate-90"}`} />
             </button>
             {open && <div className="px-4 pb-4">{children}</div>}
@@ -33,10 +39,11 @@ function NBAPage() {
                 <h1 className="text-3xl font-bold">NBA</h1>
                 <PlayerSearch />
             </div>
-            <CollapsibleSection title="Upcoming games" open={showingUpcoming} onToggle={() => setShowingUpcoming(!showingUpcoming)}>
+            <TeamList />
+            <CollapsibleSection title="Upcoming games" note={`${currentSeason()} season`} open={showingUpcoming} onToggle={() => setShowingUpcoming(!showingUpcoming)}>
                 <NBAInfo />
             </CollapsibleSection>
-            <CollapsibleSection title="Past games" open={showingPast} onToggle={() => setShowingPast(!showingPast)}>
+            <CollapsibleSection title="Past games" note={`${currentSeason()} season`} open={showingPast} onToggle={() => setShowingPast(!showingPast)}>
                 <NBASeasonPastGames />
             </CollapsibleSection>
         </div>

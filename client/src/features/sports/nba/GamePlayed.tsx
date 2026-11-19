@@ -8,18 +8,19 @@ import LineScore from "./LineScore";
 import TeamGameStats from "./TeamGameStats";
 import { gameDateTime, finalLabel, recordLabel } from "../../../utils/nbaGame";
 import BackButton from "../../../components/BackButton";
+import { Link } from "react-router-dom";
 
 // one side of the scoreboard: team name, record, score and W/L, the loser is dimmed
-function ScoreSide({ name, abbreviation, record, score, won, alignRight = false }:
-    { name: string, abbreviation: string, record: string, score: number, won: boolean, alignRight?: boolean }) {
+function ScoreSide({ team_id, name, abbreviation, record, score, won, alignRight = false }:
+    { team_id: number, name: string, abbreviation: string, record: string, score: number, won: boolean, alignRight?: boolean }) {
     return (
         <div className={`flex items-center gap-4 ${alignRight ? "md:flex-row-reverse md:text-right" : ""}`}>
             <div className="flex flex-col">
                 <span className={`text-2xl font-bold ${won ? "" : "text-zinc-500"}`}>
-                    {abbreviation}
+                    <Link className="hover:text-sky-400 hover:underline" to={`/nba/team/${team_id}`}>{abbreviation}</Link>
                     {record && <span className="ml-2 text-sm font-normal text-zinc-400">{record}</span>}
                 </span>
-                <span className="text-sm text-zinc-400">{name}</span>
+                <Link className="text-sm text-zinc-400 hover:text-sky-400 hover:underline" to={`/nba/team/${team_id}`}>{name}</Link>
             </div>
             <span className={`text-5xl font-bold tabular-nums ${won ? "" : "text-zinc-500"}`}>{score}</span>
             <span className={`text-sm font-bold px-1.5 py-0.5 rounded ${won ? "bg-emerald-500/15 text-emerald-400" : "bg-rose-500/15 text-rose-400"}`}>
@@ -95,7 +96,11 @@ function GamePlayed({ game }: { game: NbaGame }) {
                 <div className="flex items-start gap-3 bg-zinc-900 border border-zinc-800 rounded-xl p-4">
                     <BackButton />
                     <div className="flex flex-col gap-1">
-                        <h1 className="text-3xl font-bold">{game.away_team} @ {game.home_team}</h1>
+                        <h1 className="text-3xl font-bold">
+                            <Link className="hover:text-sky-400 hover:underline" to={`/nba/team/${game.away_team_id}`}>{game.away_team}</Link>
+                            {" @ "}
+                            <Link className="hover:text-sky-400 hover:underline" to={`/nba/team/${game.home_team_id}`}>{game.home_team}</Link>
+                        </h1>
                         <span className="text-zinc-400">{gameDateTime(game)}</span>
                         <p className="text-zinc-500 mt-2">Stats not yet available for this game</p>
                     </div>
@@ -119,6 +124,7 @@ function GamePlayed({ game }: { game: NbaGame }) {
                 </div>
                 <div className="flex flex-col md:flex-row md:items-center md:justify-center gap-4 md:gap-12 pb-2">
                     <ScoreSide
+                        team_id={game.away_team_id}
                         name={game.away_team_name}
                         abbreviation={game.away_team}
                         record={recordLabel(awayStats?.season_wins, awayStats?.season_losses)}
@@ -127,6 +133,7 @@ function GamePlayed({ game }: { game: NbaGame }) {
                     />
                     <span className="hidden md:block text-2xl text-zinc-600">@</span>
                     <ScoreSide
+                        team_id={game.home_team_id}
                         name={game.home_team_name}
                         abbreviation={game.home_team}
                         record={recordLabel(homeStats?.season_wins, homeStats?.season_losses)}

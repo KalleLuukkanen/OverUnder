@@ -7,6 +7,7 @@ import NBAGameCard from "./NBAGameCard";
 import { ChevronDown } from "lucide-react";
 import NBAPlayerBrief from "./NBAPlayerBrief";
 import { recordLabel } from "../../../utils/nbaGame";
+import { Link } from "react-router-dom";
 
 function NBAGameTeam({ team_id, opp_team_id, opp_team }: { team_id: number, opp_team_id: number, opp_team: string }) {
 
@@ -66,7 +67,7 @@ function NBAGameTeam({ team_id, opp_team_id, opp_team }: { team_id: number, opp_
     return (
         <div className="flex flex-col gap-3 bg-zinc-900 border border-zinc-800 rounded-xl p-4">
             <h2 className="text-xl font-semibold">
-                {team.name}
+                <Link className="hover:text-sky-400 hover:underline" to={`/nba/team/${team.id}`}>{team.name}</Link>
                 {recordLabel(team.wins, team.losses) &&
                     <span className="ml-2 text-base font-normal text-zinc-400">{recordLabel(team.wins, team.losses)}</span>
                 }

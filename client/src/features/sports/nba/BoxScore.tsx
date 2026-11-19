@@ -24,7 +24,7 @@ const COLUMNS: { label: string, key: SortKey }[] = [
 const shooting = (made: number, attempted: number) => `${made}-${attempted}`;
 
 // one team's box score table, sorted by minutes at first, totals on the last row
-function TeamBox({ team, players }: { team: string, players: NbaBoxScore[] }) {
+function TeamBox({ team, team_id, players }: { team: string, team_id: number, players: NbaBoxScore[] }) {
 
     const [sortKey, setSortKey] = useState<SortKey>("minutes");
     const [ascending, setAscending] = useState(false);
@@ -46,7 +46,7 @@ function TeamBox({ team, players }: { team: string, players: NbaBoxScore[] }) {
 
     return (
         <div className="flex flex-col gap-2 min-w-0">
-            <span className="font-semibold text-zinc-300">{team}</span>
+            <Link className="w-fit font-semibold text-zinc-300 hover:text-sky-400 hover:underline" to={`/nba/team/${team_id}`}>{team}</Link>
             {players.length === 0 ?
                 <p className="text-zinc-500">No stats for this team</p> :
                 <div className={table.wrapper}>
@@ -119,8 +119,8 @@ function BoxScore({ boxScore, away_team, away_team_id, home_team, home_team_id }
 
     return (
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-            <TeamBox team={away_team} players={awayPlayers} />
-            <TeamBox team={home_team} players={homePlayers} />
+            <TeamBox team={away_team} team_id={away_team_id} players={awayPlayers} />
+            <TeamBox team={home_team} team_id={home_team_id} players={homePlayers} />
         </div>
     )
 }
