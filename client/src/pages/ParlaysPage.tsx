@@ -9,6 +9,8 @@ import Loading from "../components/Loading";
 import SignInPrompt from "../components/SignInPrompt";
 import { STATS } from "../features/sports/nba/hitRateStats";
 import { gameDateTime } from "../utils/nbaGame";
+import { estimateParlay, percent } from "../features/parlays/parlayEstimate";
+import EstimateInfo from "../features/parlays/EstimateInfo";
 
 const PARLAY_STATUS: Record<Parlay["status"], { label: string, className: string }> = {
     empty: { label: "Empty", className: "bg-zinc-800 text-zinc-400" },
@@ -25,23 +27,6 @@ const LEG_STATUS: Record<ParlayLegStatus, { label: string, className: string }> 
     miss: { label: "Miss", className: "bg-rose-500/15 text-rose-400" },
     push: { label: "Push", className: "bg-zinc-800 text-zinc-400" },
     void: { label: "DNP", className: "bg-zinc-800 text-zinc-400" },
-};
-
-// chance of the whole parlay from the legs, as if they were independent:
-// settled legs count as they went (hit/void/push = 1, miss = 0), open ones use the last 10 games hit rate
-// null if an open leg has no hit rate to use
-const estimateChance = (legs: ParlayLeg[]) => {
-    if (legs.length === 0) return null;
-    let chance = 1;
-    for (const leg of legs) {
-        if (leg.status === "miss") return 0;
-        if (leg.status === "pending" || leg.status === "no_game") {
-            const rate = leg.hit_rates.last10?.hit_rate;
-            if (rate === null || rate === undefined) return null;
-            chance *= rate / 100;
-        }
-    }
-    return chance;
 };
 
 // small hit rate chip: 'L10 60%', green from 50% up
@@ -110,7 +95,7 @@ function ParlayCard({ parlay, onChange }: { parlay: Parlay, onChange: () => void
     const [oddsError, setOddsError] = useState("");
 
     const status = PARLAY_STATUS[parlay.status];
-    const chance = estimateChance(parlay.legs);
+    const chance = estimateParlay(parlay.legs);
     const implied = parlay.odds ? 1 / parlay.odds : null;
     const open = parlay.status === "pending" || parlay.status === "empty";
 
@@ -191,11 +176,13 @@ function ParlayCard({ parlay, onChange }: { parlay: Parlay, onChange: () => void
             {parlay.legs.length > 0 &&
                 <div className="flex flex-wrap items-end gap-x-8 gap-y-3 pt-3 border-t border-zinc-800 text-sm">
                     <div className="flex flex-col">
-                        <span className="text-xs uppercase tracking-wide text-zinc-500">Estimated chance</span>
-                        <span className="text-xl font-semibold tabular-nums">
-                            {chance === null ? "–" : `${(chance * 100).toFixed(chance < 0.1 ? 1 : 0)}%`}
+                        <span className="flex items-center gap-1 text-xs uppercase tracking-wide text-zinc-500">
+                            Estimated chance <EstimateInfo legs={parlay.legs} />
                         </span>
-                        <span className="text-xs text-zinc-500">{open ? "from last 10 games, legs as independent" : "final"}</span>
+                        <span className="text-xl font-semibold tabular-nums">
+                            {chance === null ? "–" : percent(chance)}
+                        </span>
+                        <span className="text-xs text-zinc-500">{open ? "blended hit rates" : "final"}</span>
                     </div>
                     <label className="flex flex-col gap-1">
                         <span className="text-xs uppercase tracking-wide text-zinc-500">Odds</span>
