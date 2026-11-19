@@ -3,9 +3,18 @@ import { previousSeason } from "./nbaGamesRepository.js";
 
 const sql = postgres();
 
+// retired = no team and no games in the current or previous season (a free agent has played recently)
+const isRetired = () => sql`
+    (p.team_id IS NULL AND NOT EXISTS (
+        SELECT 1
+        FROM nba_player_game pg
+        JOIN nba_game g ON g.id = pg.game_id
+        WHERE pg.player_id = p.id AND g.season >= ${previousSeason()}
+    ))
+`;
+
 // columns + join shared by every query: player info with current team's abbreviation and name
 // birth_date as text 'yyyy-mm-dd' so it isn't shifted by time zones
-// retired = no team and no games in the current or previous season (a free agent has played recently)
 const playersWithTeam = () => sql`
     SELECT
         p.id, p.name,
@@ -13,12 +22,7 @@ const playersWithTeam = () => sql`
         p.birth_date::text AS birth_date, p.country, p.school,
         p.height_inches, p.weight_lbs, p.jersey, p.position,
         p.draft_year, p.draft_round, p.draft_number, p.from_year,
-        (p.team_id IS NULL AND NOT EXISTS (
-            SELECT 1
-            FROM nba_player_game pg
-            JOIN nba_game g ON g.id = pg.game_id
-            WHERE pg.player_id = p.id AND g.season >= ${previousSeason()}
-        )) AS retired
+        ${isRetired()} AS retired
     FROM nba_player p
     LEFT JOIN nba_team t ON t.id = p.team_id
 `;
@@ -43,11 +47,13 @@ const getByName = async (name: string) => {
 };
 
 // search players by part of name ('edwa' -> Anthony Edwards), names starting with the search first
-const searchPlayers = async (query: string, limit = 10) => {
+// activeOnly leaves retired players out (prop checker: only players who can still play)
+const searchPlayers = async (query: string, limit = 10, activeOnly = false) => {
     const search = query.trim();
     const result = await sql`
         ${playersWithTeam()}
         WHERE p.name ILIKE ${"%" + search + "%"}
+            ${activeOnly ? sql`AND NOT ${isRetired()}` : sql``}
         ORDER BY
             (lower(p.name) LIKE lower(${search + "%"})) DESC,
             p.name

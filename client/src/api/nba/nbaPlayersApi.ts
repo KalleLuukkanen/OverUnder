@@ -10,8 +10,9 @@ const getByName = (name: string) =>
     post<NbaPlayer>("/api/nba/players/name", { name });
 
 // search players by part of name ('edwa'), at least 2 characters
-const searchPlayers = (query: string, limit?: number) =>
-    post<NbaPlayer[]>("/api/nba/players/search", { query, limit });
+// activeOnly leaves retired players out
+const searchPlayers = (query: string, limit?: number, activeOnly = false) =>
+    post<NbaPlayer[]>("/api/nba/players/search", { query, limit, active_only: activeOnly });
 
 // get player's season by season and career averages, regular season and playoffs
 const getPlayersCareer = (playerId: number) =>

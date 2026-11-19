@@ -7,8 +7,9 @@ import { Search } from "lucide-react";
 // search players by name, results show as a list below the input
 // arrow keys move through the results, enter opens the highlighted one
 // onSelect given: the chosen player is passed to it instead of opening the player's page
-function PlayerSearch({ onSelect, placeholder = "Search player...", className = "w-full sm:w-80" }:
-    { onSelect?: (player: NbaPlayer) => void, placeholder?: string, className?: string }) {
+// activeOnly: retired players aren't listed (prop checker)
+function PlayerSearch({ onSelect, placeholder = "Search player...", className = "w-full sm:w-80", activeOnly = false }:
+    { onSelect?: (player: NbaPlayer) => void, placeholder?: string, className?: string, activeOnly?: boolean }) {
 
     const navigate = useNavigate();
 
@@ -44,7 +45,7 @@ function PlayerSearch({ onSelect, placeholder = "Search player...", className = 
         const timer = setTimeout(async () => {
             setSearching(true);
             try {
-                const players = await searchPlayers(query.trim(), 10);
+                const players = await searchPlayers(query.trim(), 10, activeOnly);
                 if (!cancelled) setResults(players);
             } catch {
                 if (!cancelled) setResults([]);
@@ -56,7 +57,7 @@ function PlayerSearch({ onSelect, placeholder = "Search player...", className = 
             cancelled = true;
             clearTimeout(timer);
         };
-    }, [query]);
+    }, [query, activeOnly]);
 
     // new results: nothing highlighted until arrows are used
     useEffect(() => {

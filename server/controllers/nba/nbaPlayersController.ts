@@ -37,7 +37,8 @@ const searchPlayers = async (req: Request, res: Response) => {
     if (!Number.isInteger(limit) || limit < 1 || limit > 50) {
         return res.status(400).json({ error: "Invalid limit, expected 1-50" });
     }
-    const players = await nbaPlayersRepository.searchPlayers(query, limit);
+    const activeOnly = req.body?.active_only === true;
+    const players = await nbaPlayersRepository.searchPlayers(query, limit, activeOnly);
     return res.status(200).json(players);
 };
 

@@ -109,7 +109,7 @@ function NBAPropChecker() {
                                 <X size={16} />
                             </button>
                         </div> :
-                        <PlayerSearch onSelect={choosePlayer} placeholder="Search any NBA player..." className="w-full" />
+                        <PlayerSearch onSelect={choosePlayer} placeholder="Search any NBA player..." className="w-full" activeOnly />
                     }
                 </div>
                 <label className="flex flex-col gap-1">
