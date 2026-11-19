@@ -3,7 +3,8 @@ import { Link } from "react-router-dom";
 import { overtimeLabel } from "../../../utils/nbaGame";
 
 // hit rate percentage, a bar, and every game as a hit (✓) or miss (✗)
-function HitRateResult({ result }: { result: NbaHitRate }) {
+// children (the splits) go between the bar and the game list
+function HitRateResult({ result, children }: { result: NbaHitRate, children?: React.ReactNode }) {
 
     if (result.games === 0) return <p className="text-zinc-500">No games found</p>;
 
@@ -23,6 +24,7 @@ function HitRateResult({ result }: { result: NbaHitRate }) {
             <div className="h-2 rounded-full bg-zinc-800 overflow-hidden">
                 <div className={`h-full ${good ? "bg-emerald-500" : "bg-rose-500"}`} style={{ width: `${result.hit_rate ?? 0}%` }} />
             </div>
+            {children}
             <ul className="flex flex-col divide-y divide-zinc-800 text-sm">
                 {result.results.map((r) => (
                     <li key={r.game_id} className="flex items-center gap-3 py-1.5">

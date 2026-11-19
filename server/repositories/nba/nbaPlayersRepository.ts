@@ -1,13 +1,7 @@
 import postgres from "postgres";
-import { currentSeason } from "./nbaGamesRepository.js";
+import { previousSeason } from "./nbaGamesRepository.js";
 
 const sql = postgres();
-
-// season before the current one ('2026-27' -> '2025-26')
-const previousSeason = () => {
-    const startYear = Number(currentSeason().slice(0, 4)) - 1;
-    return `${startYear}-${String((startYear + 1) % 100).padStart(2, "0")}`;
-};
 
 // columns + join shared by every query: player info with current team's abbreviation and name
 // birth_date as text 'yyyy-mm-dd' so it isn't shifted by time zones

@@ -1,4 +1,5 @@
 import postgres from "postgres";
+import { currentSeason, previousSeason } from "./nbaGamesRepository.js";
 
 const sql = postgres();
 
@@ -125,12 +126,12 @@ const getHitRate = async (
     const value = sql.unsafe(STATS[stat]);
     const result = await sql`
         SELECT
-            pg.game_id, g.game_date, g.overtime_periods, o.abbreviation AS opponent, pg.is_home,
+            pg.game_id, g.game_date, g.overtime_periods,
+            nba_team_abbreviation(pg.opponent_id, g.season) AS opponent, pg.is_home,
             pg.minutes::float8 AS minutes,
             (${value})::int AS value
         FROM nba_player_game pg
         JOIN nba_game g ON g.id = pg.game_id
-        JOIN nba_team o ON o.id = pg.opponent_id
         WHERE pg.player_id = ${player_id}
             ${opponent_id ? sql`AND pg.opponent_id = ${opponent_id}` : sql``}
         ORDER BY g.game_date DESC
@@ -160,7 +161,80 @@ const getHitRate = async (
     };
 };
 
+// hits, hit rate (percent, 1 decimal) and average of a group of games, a push counts as a miss
+const summarize = (
+    key: string,
+    label: string,
+    values: number[],
+    line: number,
+    side: "over" | "under",
+) => {
+    const hits = values.filter((v) => side === "over" ? v > line : v < line).length;
+    const total = values.reduce((sum, v) => sum + v, 0);
+    return {
+        key,
+        label,
+        games: values.length,
+        hits,
+        hit_rate: values.length ? Math.round((hits / values.length) * 1000) / 10 : null,
+        average: values.length ? Math.round((total / values.length) * 10) / 10 : null,
+    };
+};
+
+// the same prop over different samples: recent form, this season, home/away, big minutes,
+// last season and (with opponent_id) the latest games against that team from every season
+const getHitRateSplits = async (
+    player_id: number,
+    stat: string,
+    line: number,
+    side: "over" | "under",
+    opponent_id?: number,
+) => {
+    const value = sql.unsafe(STATS[stat]);
+    const season = currentSeason();
+    const lastSeason = previousSeason();
+
+    // current and previous season's games, latest first
+    const games = await sql`
+        SELECT g.season, pg.is_home, pg.minutes::float8 AS minutes, (${value})::int AS value
+        FROM nba_player_game pg
+        JOIN nba_game g ON g.id = pg.game_id
+        WHERE pg.player_id = ${player_id} AND g.season >= ${lastSeason}
+        ORDER BY g.game_date DESC;
+    `;
+    const thisSeason = games.filter((g) => g.season === season);
+    const values = (list: postgres.Row[]) => list.map((g) => g.value as number);
+
+    const splits = [
+        summarize("last5", "Last 5", values(games.slice(0, 5)), line, side),
+        summarize("last10", "Last 10", values(games.slice(0, 10)), line, side),
+        summarize("last20", "Last 20", values(games.slice(0, 20)), line, side),
+        summarize("season", `${season} season`, values(thisSeason), line, side),
+        summarize("home", `Home (${season})`, values(thisSeason.filter((g) => g.is_home)), line, side),
+        summarize("away", `Away (${season})`, values(thisSeason.filter((g) => !g.is_home)), line, side),
+        summarize("minutes30", `30+ min (${season})`, values(thisSeason.filter((g) => g.minutes >= 30)), line, side),
+        summarize("lastSeason", `${lastSeason} season`, values(games.filter((g) => g.season === lastSeason)), line, side),
+    ];
+
+    if (opponent_id) {
+        const vs = await sql`
+            SELECT (${value})::int AS value, nba_team_abbreviation(pg.opponent_id, ${season}) AS opponent
+            FROM nba_player_game pg
+            JOIN nba_game g ON g.id = pg.game_id
+            WHERE pg.player_id = ${player_id} AND pg.opponent_id = ${opponent_id}
+            ORDER BY g.game_date DESC
+            LIMIT 10;
+        `;
+        // the label uses the opponent's current abbreviation
+        const opponent = vs[0]?.opponent ?? "opponent";
+        splits.push(summarize("opponent", `vs ${opponent} (last 10)`, vs.map((g) => g.value as number), line, side));
+    }
+
+    return { stat, line, side, splits };
+};
+
 export {
+    getHitRateSplits,
     STATS,
     isStat,
     getPlayersGames,

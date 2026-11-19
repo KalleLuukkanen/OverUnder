@@ -1,5 +1,5 @@
 import { get, post } from "../apiClient";
-import type { NbaBoxScore, NbaHitRate, NbaSeasonAverages, NbaSide, NbaStat } from "../../types/nba";
+import type { NbaBoxScore, NbaHitRate, NbaHitRateSplits, NbaSeasonAverages, NbaSide, NbaStat } from "../../types/nba";
 
 // get player's all games from given season (defaults to current season), latest first
 const getPlayersGames = (playerId: number, season?: string) =>
@@ -34,7 +34,17 @@ const getHitRate = (
     return post<NbaHitRate>(path, bet);
 };
 
+// the same prop over several samples (last 5/10/20, season, home/away, 30+ min, last season),
+// with an opponent also the latest games against them
+const getHitRateSplits = (
+    playerId: number,
+    bet: { stat: NbaStat; line: number; side: NbaSide },
+    opponentId?: number,
+) =>
+    post<NbaHitRateSplits>(`/api/nba/players/${playerId}/hit-rate/splits`, { ...bet, opponent_id: opponentId });
+
 export {
+    getHitRateSplits,
     getPlayersGames,
     getPlayersLastGames,
     getPlayersLastGamesVsOpponent,

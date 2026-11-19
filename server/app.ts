@@ -85,6 +85,7 @@ app.post("/api/nba/players/:playerId/games", nbaPlayerGamesController.getPlayers
 app.post("/api/nba/players/:playerId/games/last", nbaPlayerGamesController.getPlayersLastGames);
 app.post("/api/nba/players/:playerId/averages", nbaPlayerGamesController.getPlayersSeasonAverages);
 app.post("/api/nba/players/:playerId/hit-rate", nbaPlayerGamesController.getHitRate);
+app.post("/api/nba/players/:playerId/hit-rate/splits", nbaPlayerGamesController.getHitRateSplits);
 app.post("/api/nba/players/:playerId/vs/:opponentId/games", nbaPlayerGamesController.getPlayersLastGamesVsOpponent);
 app.post("/api/nba/players/:playerId/vs/:opponentId/hit-rate", nbaPlayerGamesController.getHitRate);
 

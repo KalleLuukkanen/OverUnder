@@ -170,6 +170,23 @@ export type NbaHitRate = {
     }[];
 };
 
+// one sample of a prop's hit rate splits, e.g. 'Last 5' or 'Home (2026-27)'
+export type NbaHitRateSplit = {
+    key: string;
+    label: string;
+    games: number;
+    hits: number;
+    hit_rate: number | null;   // percent, null if no games
+    average: number | null;
+};
+
+export type NbaHitRateSplits = {
+    stat: NbaStat;
+    line: number;
+    side: NbaSide;
+    splits: NbaHitRateSplit[];
+};
+
 // per game averages over a season or a whole career, percentages are null without attempts
 export type NbaAverages = {
     games: number;

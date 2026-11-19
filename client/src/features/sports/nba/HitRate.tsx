@@ -4,6 +4,7 @@ import { getOne, getRoster } from "../../../api/nba/nbaTeamsApi";
 import { useState, useEffect } from "react";
 import { STATS } from "./hitRateStats";
 import HitRateResult from "./HitRateResult";
+import HitRateSplits from "./HitRateSplits";
 
 function HitRate({ team1_id, team2_id }: { team1_id: number, team2_id?: number }) {
 
@@ -27,6 +28,8 @@ function HitRate({ team1_id, team2_id }: { team1_id: number, team2_id?: number }
 
     const [calculating, setCalculating] = useState(false);
     const [result, setResult] = useState<NbaHitRate | null>(null);
+    // player the result was calculated for, the select may already show another one
+    const [resultPlayer, setResultPlayer] = useState<number | null>(null);
     const [errorMessage, setErrorMessage] = useState("");
 
     useEffect(() => {
@@ -79,6 +82,7 @@ function HitRate({ team1_id, team2_id }: { team1_id: number, team2_id?: number }
                 vsOpponent && opponent ? opponent.id : undefined,
             );
             setResult(res);
+            setResultPlayer(playerSelected);
         } catch {
             setResult(null);
             setErrorMessage("Couldn't calculate hit rate, please try again");
@@ -206,7 +210,11 @@ function HitRate({ team1_id, team2_id }: { team1_id: number, team2_id?: number }
                     {!result && !errorMessage &&
                         <p className="text-zinc-500">Choose a player, stat and line to see how often it would have hit.</p>
                     }
-                    {result && <HitRateResult result={result} />}
+                    {result && resultPlayer !== null &&
+                        <HitRateResult result={result}>
+                            <HitRateSplits player_id={resultPlayer} result={result} opponent_id={opponent?.id} />
+                        </HitRateResult>
+                    }
                 </div>
             </form>
         </section>

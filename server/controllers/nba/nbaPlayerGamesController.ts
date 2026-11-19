@@ -78,6 +78,23 @@ const getPlayersSeasonAverages = async (req: Request, res: Response) => {
     return res.status(200).json(averages);
 };
 
+// checks the prop in the request body: { stat, line, side? }, returns an error message or the prop
+const readProp = (body: Record<string, unknown> | undefined) => {
+    const stat = body?.stat;
+    if (typeof stat !== "string" || !nbaPlayerGamesRepository.isStat(stat)) {
+        return { error: `Invalid stat, expected one of: ${Object.keys(nbaPlayerGamesRepository.STATS).join(", ")}` };
+    }
+    const line = body?.line;
+    if (typeof line !== "number" || !Number.isFinite(line) || line < 0) {
+        return { error: "Missing or invalid line" };
+    }
+    const side = body?.side ?? "over";
+    if (side !== "over" && side !== "under") {
+        return { error: "Invalid side, expected 'over' or 'under'" };
+    }
+    return { stat, line, side: side as "over" | "under" };
+};
+
 // hit rate of a prop, optionally only against given team (opponentId param)
 // body: { stat: 'fgm', line: 5.5, side?: 'over' | 'under', limit?: 10 }
 const getHitRate = async (req: Request, res: Response) => {
@@ -86,26 +103,31 @@ const getHitRate = async (req: Request, res: Response) => {
     if (!Number.isInteger(player_id) || (opponent_id !== undefined && !Number.isInteger(opponent_id))) {
         return res.status(400).json({ error: "Missing or invalid player or opponent id" });
     }
-    const stat = req.body?.stat;
-    if (typeof stat !== "string" || !nbaPlayerGamesRepository.isStat(stat)) {
-        return res.status(400).json({
-            error: `Invalid stat, expected one of: ${Object.keys(nbaPlayerGamesRepository.STATS).join(", ")}`,
-        });
-    }
-    const line = req.body?.line;
-    if (typeof line !== "number" || !Number.isFinite(line) || line < 0) {
-        return res.status(400).json({ error: "Missing or invalid line" });
-    }
-    const side = req.body?.side ?? "over";
-    if (side !== "over" && side !== "under") {
-        return res.status(400).json({ error: "Invalid side, expected 'over' or 'under'" });
+    const prop = readProp(req.body);
+    if ("error" in prop) {
+        return res.status(400).json({ error: prop.error });
     }
     const limit = req.body?.limit ?? 10;
     if (!Number.isInteger(limit) || limit < 1 || limit > MAX_LIMIT) {
         return res.status(400).json({ error: `Invalid limit, expected 1-${MAX_LIMIT}` });
     }
-    const hitRate = await nbaPlayerGamesRepository.getHitRate(player_id, stat, line, side, limit, opponent_id);
+    const hitRate = await nbaPlayerGamesRepository.getHitRate(player_id, prop.stat, prop.line, prop.side, limit, opponent_id);
     return res.status(200).json(hitRate);
+};
+
+// the prop's hit rate over several samples, body: { stat, line, side?, opponent_id? }
+const getHitRateSplits = async (req: Request, res: Response) => {
+    const player_id = Number(req.params.playerId);
+    const opponent_id = req.body?.opponent_id;
+    if (!Number.isInteger(player_id) || (opponent_id !== undefined && opponent_id !== null && !Number.isInteger(opponent_id))) {
+        return res.status(400).json({ error: "Missing or invalid player or opponent id" });
+    }
+    const prop = readProp(req.body);
+    if ("error" in prop) {
+        return res.status(400).json({ error: prop.error });
+    }
+    const splits = await nbaPlayerGamesRepository.getHitRateSplits(player_id, prop.stat, prop.line, prop.side, opponent_id ?? undefined);
+    return res.status(200).json(splits);
 };
 
 export {
@@ -115,4 +137,5 @@ export {
     getGameBoxScore,
     getPlayersSeasonAverages,
     getHitRate,
+    getHitRateSplits,
 };

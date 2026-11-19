@@ -9,6 +9,12 @@ const currentSeason = () => {
     return `${startYear}-${String((startYear + 1) % 100).padStart(2, "0")}`;
 };
 
+// season before the current one ('2026-27' -> '2025-26')
+const previousSeason = () => {
+    const startYear = Number(currentSeason().slice(0, 4)) - 1;
+    return `${startYear}-${String((startYear + 1) % 100).padStart(2, "0")}`;
+};
+
 // columns shared by every query: game info with both teams' abbreviations and names
 // names are the ones of the game's season (an 2007 game is SEA, not OKC)
 // home_score and away_score are null for games not played yet
@@ -166,6 +172,7 @@ export {
     getSeasons,
     getGameTeamStats,
     currentSeason,
+    previousSeason,
     getOne,
     getUpcomingGames,
     getGamesByDate,

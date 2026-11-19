@@ -6,6 +6,7 @@ import { Link } from "react-router-dom";
 import { X } from "lucide-react";
 import PlayerSearch from "./PlayerSearch";
 import HitRateResult from "./HitRateResult";
+import HitRateSplits from "./HitRateSplits";
 import { STATS } from "./hitRateStats";
 import { gameDateTime } from "../../../utils/nbaGame";
 
@@ -186,8 +187,10 @@ function NBAPropChecker() {
                         {player.name} · {statLabel}{vsNext && nextOpponent ? ` · vs ${nextOpponent.abbreviation} only` : ""}
                     </p>
                 }
-                {result ?
-                    <HitRateResult result={result} /> :
+                {result && player ?
+                    <HitRateResult result={result}>
+                        <HitRateSplits player_id={player.id} result={result} opponent_id={nextOpponent?.id} />
+                    </HitRateResult> :
                     !errorMessage &&
                     <div className="flex flex-col gap-2 text-zinc-500">
                         <p>Pick a player, a stat and the line from your bookmaker.</p>
