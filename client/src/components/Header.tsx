@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { Link, NavLink } from "react-router-dom";
+import { Link, NavLink, useLocation } from "react-router-dom";
 import { LogIn, House, ChevronDown, Target, CircleUser } from "lucide-react";
 import { sports } from "../types/sports";
 import ThemeToggle from "./ThemeToggle";
@@ -27,6 +27,9 @@ function LeagueList({ leagues, onSelect }: { leagues: string[], onSelect: () => 
 function Header() {
     const [openSport, setOpenSport] = useState<string | null>(null);
     const { data: session } = authClient.useSession();
+    // the auth page returns here after signing in (not when already on the auth page)
+    const location = useLocation();
+    const from = location.pathname === "/auth" ? undefined : location.pathname + location.search;
 
     // clicking outside the sports menu closes the open dropdown
     const navRef = useRef<HTMLUListElement>(null);
@@ -82,6 +85,7 @@ function Header() {
                 <Link
                     className="flex items-center gap-2 px-3 py-1.5 rounded-md text-zinc-300 hover:bg-zinc-800 hover:text-white"
                     to="/auth"
+                    state={{ from }}
                     onClick={() => setOpenSport(null)}
                 >
                     {session ?
