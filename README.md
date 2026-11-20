@@ -1,5 +1,38 @@
 # OverUnder
 
+## Description
+
+OverUnder is a general sports site, which includes information about your favorite sports. What makes it special, is the prop checker, to check the probabilities of a bet before you make it. This is a work in progress, so new features are being implemented constantly. 
+
+## Stack
+
+- **Client:** React 19, TypeScript, Vite, Tailwind CSS v4, React Router, lucide-react icons. Tested with Vitest and Testing Library, linted with oxlint.
+- **Server:** Node.js 22, Express, TypeScript run with tsx, postgres.js for queries.
+- **Auth:** Better Auth with email and password, stored in Postgres through Kysely.
+- **Database:** PostgreSQL 17, with migrations run by Flyway.
+- **Data collector:** Python 3.12 with kagglehub and psycopg. It loads NBA box scores and schedules from Kaggle and syncs the current season daily.
+- **Infrastructure:** Docker Compose runs every service.
+
+## Screenshots
+
+- Homepage:
+
+![OverUnder Home Page / Prop Checker](docs/screenshots/homepage-1.png)
+![OverUnder Home Page 2](docs/screenshots/homepage-2.png)
+
+- Parlays page:
+![OverUnder Parlays](docs/screenshots/parlays.png)
+
+- Nba page:
+![OverUnder NBA](docs/screenshots/nba-page.png)
+
+- Game page:
+![OverUnder Game Page](docs/screenshots/gamepage.png)
+
+- Player page:
+![OverUnder Player Page](docs/screenshots/playerpage-1.png)
+![OverUnder Player Page 2](docs/screenshots/playerpage-2.png)
+
 ## Running locally
 
 ### Requirements
@@ -11,7 +44,7 @@
 
 ```bash
 git clone https://github.com/KalleLuukkanen/OverUnder.git
-cd bet-assistant
+cd OverUnder
 ```
 
 ### 2. Create `project.env`
