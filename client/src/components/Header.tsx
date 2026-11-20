@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef } from "react";
 import { Link, NavLink, useLocation } from "react-router-dom";
-import { LogIn, House, ChevronDown, Target, CircleUser, Layers } from "lucide-react";
+import { LogIn, ChevronDown, Target, CircleUser, Layers } from "lucide-react";
 import { sports } from "../types/sports";
 import ThemeToggle from "./ThemeToggle";
+import Logo from "./Logo";
 import { authClient } from "../utils/auth";
 
 // onSelect closes the dropdown: the header stays mounted when moving between pages
@@ -51,12 +52,13 @@ function Header() {
         <header className="sticky top-0 z-30 bg-zinc-950/80 backdrop-blur border-b border-zinc-800">
             <div className="flex items-center gap-6 max-w-7xl mx-auto px-4 h-14">
                 <Link
-                    className="flex items-center gap-2 text-zinc-100 font-semibold hover:text-white"
+                    className="flex items-center shrink-0 text-zinc-100 hover:text-white"
                     to="/"
+                    aria-label="OverUnder home"
                     onClick={() => setOpenSport(null)}
                 >
-                    <House size={20} className="text-sky-400" />
-                    <span className="hidden sm:inline">OverUnder</span>
+                    <Logo markOnly className="h-9 w-9 sm:hidden" />
+                    <Logo className="hidden sm:block h-9 w-auto" />
                 </Link>
                 <NavLink
                     className={({ isActive }) => `flex items-center gap-1.5 px-3 py-1.5 rounded-md font-medium hover:bg-zinc-800 hover:text-white ${isActive ? "bg-zinc-800 text-sky-400" : "text-sky-400"}`}
