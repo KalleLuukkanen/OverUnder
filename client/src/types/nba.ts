@@ -338,11 +338,12 @@ export type NbaLeader = {
     value: number;                 // per game
 };
 
-// current season's league leaders, min_games = games needed to be listed
+// current season's league leaders, all players and rookies only, min_games = games needed to be listed
 export type NbaLeaders = {
     season: string;
     min_games: number;
     leaders: Record<NbaLeaderStat, NbaLeader[]>;
+    rookies: Record<NbaLeaderStat, NbaLeader[]>;
 };
 
 // team bets of the prop checker: win = moneyline, spread = the team's line (e.g. -5.5),

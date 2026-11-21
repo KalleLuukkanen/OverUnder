@@ -96,8 +96,10 @@ const getStandings = async () => {
     }).sort((a, b) => b.pct - a.pct || b.wins - a.wins || a.abbreviation.localeCompare(b.abbreviation));
 };
 
-// current season's league leaders: top 10 per game in points, rebounds, assists, steals, blocks and threes
+// current season's league leaders: top 10 per game in points, rebounds, assists, steals, blocks and threes,
+// for all players and for rookies only (the same game minimum for both)
 // only players with enough games count (LEADER_MIN_SHARE of the most games played)
+// a rookie's first season is this one (from_year), or without from_year they have no earlier games
 const getLeaders = async (limit = 10) => {
     const season = currentSeason();
 
@@ -107,6 +109,10 @@ const getLeaders = async (limit = 10) => {
             -- the team of their latest game, traded players show their current team
             nba_team_abbreviation((array_agg(pg.team_id ORDER BY g.game_date DESC))[1], ${season}) AS team,
             (array_agg(pg.team_id ORDER BY g.game_date DESC))[1] AS team_id,
+            COALESCE(p.from_year = ${Number(season.slice(0, 4))}, NOT EXISTS (
+                SELECT 1 FROM nba_player_game e JOIN nba_game eg ON eg.id = e.game_id
+                WHERE e.player_id = pg.player_id AND eg.season < ${season}
+            )) AS rookie,
             count(*)::int AS games,
             round(avg(pg.pts), 1)::float8 AS pts,
             round(avg(pg.reb), 1)::float8 AS reb,
@@ -118,15 +124,16 @@ const getLeaders = async (limit = 10) => {
         JOIN nba_game g ON g.id = pg.game_id
         JOIN nba_player p ON p.id = pg.player_id
         WHERE g.season = ${season} AND ${REGULAR_SEASON}
-        GROUP BY pg.player_id, p.name;
+        GROUP BY pg.player_id, p.name, p.from_year;
     `;
     const mostGames = Math.max(0, ...players.map((p) => p.games as number));
     const minGames = Math.ceil(mostGames * LEADER_MIN_SHARE);
     const qualified = players.filter((p) => p.games >= minGames);
 
-    const leaders = Object.fromEntries(LEADER_STATS.map((stat) => [
+    // top players of each stat in the given group
+    const leadersOf = (group: typeof qualified) => Object.fromEntries(LEADER_STATS.map((stat) => [
         stat,
-        [...qualified]
+        [...group]
             .sort((a, b) => b[stat] - a[stat] || b.games - a.games)
             .slice(0, limit)
             .map((p) => ({
@@ -139,7 +146,12 @@ const getLeaders = async (limit = 10) => {
             })),
     ]));
 
-    return { season, min_games: minGames, leaders };
+    return {
+        season,
+        min_games: minGames,
+        leaders: leadersOf(qualified),
+        rookies: leadersOf(qualified.filter((p) => p.rookie)),
+    };
 };
 
 export {
