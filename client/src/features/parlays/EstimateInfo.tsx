@@ -89,6 +89,9 @@ function EstimateInfo({ legs }: { legs: ParlayLeg[] }) {
                             so 10/10 becomes 92%, not a sure thing.
                         </li>
                         <li>
+                            Only games before each leg's game count, so the estimate stays the same after the game is played.
+                        </li>
+                        <li>
                             The legs are multiplied together as if independent. Legs from the same game often
                             move together, so treat it as a rough guide.
                         </li>
@@ -103,11 +106,9 @@ function EstimateInfo({ legs }: { legs: ParlayLeg[] }) {
                                         <span className="font-semibold tabular-nums text-zinc-100">{e.chance === null ? "–" : percent(e.chance)}</span>
                                     </span>
                                     <span className="text-xs text-zinc-500 tabular-nums">
-                                        {e.settled ?
-                                            (e.chance === 0 ? "settled: missed" : "settled: counts as 100%") :
-                                            e.parts.length === 0 ?
-                                                "no games to estimate from" :
-                                                e.parts.map((p) => `${p.label} ${p.hits}/${p.games} → ${percent(p.adjusted)} × ${Math.round(p.weight * 100)}%`).join(" · ")
+                                        {e.parts.length === 0 ?
+                                            "no games to estimate from" :
+                                            e.parts.map((p) => `${p.label} ${p.hits}/${p.games} → ${percent(p.adjusted)} × ${Math.round(p.weight * 100)}%`).join(" · ")
                                         }
                                     </span>
                                 </li>

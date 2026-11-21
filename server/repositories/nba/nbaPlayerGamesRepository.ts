@@ -181,25 +181,34 @@ const summarize = (
     };
 };
 
+// season before the given one ('2025-26' -> '2024-25')
+const seasonBefore = (season: string) => {
+    const startYear = Number(season.slice(0, 4)) - 1;
+    return `${startYear}-${String((startYear + 1) % 100).padStart(2, "0")}`;
+};
+
 // the same prop over different samples: recent form, this season, home/away, big minutes,
 // last season and (with opponent_id) the latest games against that team from every season
+// before = only games before that date (a parlay leg's game), with that game's season as 'this season'
 const getHitRateSplits = async (
     player_id: number,
     stat: string,
     line: number,
     side: "over" | "under",
     opponent_id?: number,
+    before?: { date: string, season: string },
 ) => {
     const value = sql.unsafe(STATS[stat]);
-    const season = currentSeason();
-    const lastSeason = previousSeason();
+    const season = before?.season ?? currentSeason();
+    const lastSeason = before ? seasonBefore(before.season) : previousSeason();
+    const beforeDate = before ? sql`AND g.game_date < ${before.date}::date` : sql``;
 
-    // current and previous season's games, latest first
+    // the season's and the previous season's games, latest first
     const games = await sql`
         SELECT g.season, pg.is_home, pg.minutes::float8 AS minutes, (${value})::int AS value
         FROM nba_player_game pg
         JOIN nba_game g ON g.id = pg.game_id
-        WHERE pg.player_id = ${player_id} AND g.season >= ${lastSeason}
+        WHERE pg.player_id = ${player_id} AND g.season BETWEEN ${lastSeason} AND ${season} ${beforeDate}
         ORDER BY g.game_date DESC;
     `;
     const thisSeason = games.filter((g) => g.season === season);
@@ -221,7 +230,7 @@ const getHitRateSplits = async (
             SELECT (${value})::int AS value, nba_team_abbreviation(pg.opponent_id, ${season}) AS opponent
             FROM nba_player_game pg
             JOIN nba_game g ON g.id = pg.game_id
-            WHERE pg.player_id = ${player_id} AND pg.opponent_id = ${opponent_id}
+            WHERE pg.player_id = ${player_id} AND pg.opponent_id = ${opponent_id} ${beforeDate}
             ORDER BY g.game_date DESC
             LIMIT 10;
         `;

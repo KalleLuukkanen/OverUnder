@@ -55,7 +55,7 @@ const getParlays = async (user_id: string) => {
     const legs = await sql`
         SELECT
             l.id, l.parlay_id, l.player_id, p.name AS player_name, l.stat, l.line::float8 AS line, l.side, l.game_id,
-            g.game_date, g.start_time, g.home_score, g.away_score, g.overtime_periods,
+            g.game_date, g.game_date::text AS game_day, g.season, g.start_time, g.home_score, g.away_score, g.overtime_periods,
             g.home_team_id, nba_team_abbreviation(g.home_team_id, g.season) AS home_team,
             g.away_team_id, nba_team_abbreviation(g.away_team_id, g.season) AS away_team,
             -- the player's team in that game: from the box score once played, otherwise their current team
@@ -74,7 +74,9 @@ const getParlays = async (user_id: string) => {
         const { status, value } = gradeLeg(leg);
         const isHome = leg.game_id ? leg.team_id === leg.home_team_id : null;
         const opponent_id = leg.game_id ? (isHome ? leg.away_team_id : leg.home_team_id) : null;
-        const splits = await getHitRateSplits(leg.player_id, leg.stat, leg.line, leg.side as Side, opponent_id ?? undefined);
+        // hit rates as they were before the leg's game, so a played leg keeps its pre-game estimate
+        const before = leg.game_id ? { date: leg.game_day as string, season: leg.season as string } : undefined;
+        const splits = await getHitRateSplits(leg.player_id, leg.stat, leg.line, leg.side as Side, opponent_id ?? undefined, before);
         // only the samples shown with a leg
         const rate = (key: string) => splits.splits.find((s) => s.key === key) ?? null;
         return {

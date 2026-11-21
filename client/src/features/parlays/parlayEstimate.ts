@@ -23,15 +23,12 @@ export type EstimatePart = {
 
 export type LegEstimate = {
     chance: number | null;   // 0-1, null if there's nothing to estimate from
-    settled: boolean;        // game played: chance is the result (1 or 0), not an estimate
     parts: EstimatePart[];
 };
 
-// a leg's chance: settled legs count as they went (hit / push / DNP = 1, miss = 0),
-// open legs blend the adjusted last 10, season and vs opponent hit rates
+// a leg's chance before its game: blends the adjusted last 10, season and vs opponent hit rates
+// (the server counts only games before the leg's game, so a played leg keeps the same estimate)
 export const estimateLeg = (leg: ParlayLeg): LegEstimate => {
-    if (leg.status === "miss") return { chance: 0, settled: true, parts: [] };
-    if (leg.status === "hit" || leg.status === "push" || leg.status === "void") return { chance: 1, settled: true, parts: [] };
 
     const samples: [keyof typeof WEIGHTS, string, NbaHitRateSplit | null][] = [
         ["last10", "Last 10", leg.hit_rates.last10],
@@ -39,7 +36,7 @@ export const estimateLeg = (leg: ParlayLeg): LegEstimate => {
         ["opponent", leg.game ? `vs ${leg.game.opponent}` : "vs opponent", leg.hit_rates.opponent],
     ];
     const used = samples.filter(([, , split]) => split && split.games > 0) as [keyof typeof WEIGHTS, string, NbaHitRateSplit][];
-    if (used.length === 0) return { chance: null, settled: false, parts: [] };
+    if (used.length === 0) return { chance: null, parts: [] };
 
     const totalWeight = used.reduce((sum, [key]) => sum + WEIGHTS[key], 0);
     const parts = used.map(([key, label, split]) => ({
@@ -50,18 +47,30 @@ export const estimateLeg = (leg: ParlayLeg): LegEstimate => {
         weight: WEIGHTS[key] / totalWeight,
     }));
     const chance = parts.reduce((sum, p) => sum + p.adjusted * p.weight, 0);
-    return { chance, settled: false, parts };
+    return { chance, parts };
+};
+
+// true once the leg's game is played and it has a result
+export const isSettled = (leg: ParlayLeg) => leg.status !== "pending" && leg.status !== "no_game";
+
+// a leg's chance right now: settled legs count as they went (hit / push / DNP = 1, miss = 0),
+// open legs use the pre-game estimate
+const liveLegChance = (leg: ParlayLeg) => {
+    if (leg.status === "miss") return 0;
+    if (isSettled(leg)) return 1;
+    return estimateLeg(leg).chance;
 };
 
 // the parlay's chance: the legs' chances multiplied, as if they were independent
+// live = with the settled legs' results, otherwise the estimate before any game was played
 // null if a leg has nothing to estimate from
-export const estimateParlay = (legs: ParlayLeg[]) => {
+export const estimateParlay = (legs: ParlayLeg[], live = false) => {
     if (legs.length === 0) return null;
     let chance = 1;
     for (const leg of legs) {
-        const estimate = estimateLeg(leg);
-        if (estimate.chance === null) return null;
-        chance *= estimate.chance;
+        const legChance = live ? liveLegChance(leg) : estimateLeg(leg).chance;
+        if (legChance === null) return null;
+        chance *= legChance;
     }
     return chance;
 };

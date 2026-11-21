@@ -9,7 +9,7 @@ import Loading from "../components/Loading";
 import SignInPrompt from "../components/SignInPrompt";
 import { STATS } from "../features/sports/nba/hitRateStats";
 import { gameDateTime } from "../utils/nbaGame";
-import { estimateParlay, percent } from "../features/parlays/parlayEstimate";
+import { estimateParlay, isSettled, percent } from "../features/parlays/parlayEstimate";
 import EstimateInfo from "../features/parlays/EstimateInfo";
 
 const PARLAY_STATUS: Record<Parlay["status"], { label: string, className: string }> = {
@@ -95,7 +95,9 @@ function ParlayCard({ parlay, onChange }: { parlay: Parlay, onChange: () => void
     const [oddsError, setOddsError] = useState("");
 
     const status = PARLAY_STATUS[parlay.status];
+    // estimate before the games, and while some legs are settled the chance right now
     const chance = estimateParlay(parlay.legs);
+    const liveChance = estimateParlay(parlay.legs, true);
     const implied = parlay.odds ? 1 / parlay.odds : null;
     const open = parlay.status === "pending" || parlay.status === "empty";
 
@@ -182,7 +184,11 @@ function ParlayCard({ parlay, onChange }: { parlay: Parlay, onChange: () => void
                         <span className="text-xl font-semibold tabular-nums">
                             {chance === null ? "–" : percent(chance)}
                         </span>
-                        <span className="text-xs text-zinc-500">{open ? "blended hit rates" : "final"}</span>
+                        <span className="text-xs text-zinc-500">
+                            {!open ? "before the games" :
+                                parlay.legs.some(isSettled) && liveChance !== null ? `now ${percent(liveChance)}` :
+                                "blended hit rates"}
+                        </span>
                     </div>
                     <label className="flex flex-col gap-1">
                         <span className="text-xs uppercase tracking-wide text-zinc-500">Odds</span>
@@ -200,7 +206,7 @@ function ParlayCard({ parlay, onChange }: { parlay: Parlay, onChange: () => void
                         <div className="flex flex-col">
                             <span className="text-xs uppercase tracking-wide text-zinc-500">Odds imply</span>
                             <span className="text-xl font-semibold tabular-nums">{(implied * 100).toFixed(1)}%</span>
-                            {chance !== null && open &&
+                            {chance !== null &&
                                 <span className={`text-xs ${chance > implied ? "text-emerald-400" : "text-rose-400"}`}>
                                     {chance > implied ? "estimate is above the odds" : "estimate is below the odds"}
                                 </span>
