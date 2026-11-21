@@ -90,6 +90,7 @@ app.post("/api/nba/players/search", wrap(nbaPlayersController.searchPlayers));
 app.get("/api/nba/players/:playerId", wrap(nbaPlayersController.getOne));
 app.get("/api/nba/players/:playerId/career", wrap(nbaPlayersController.getPlayersCareer));
 app.get("/api/nba/players/:playerId/career-highs", wrap(nbaPlayersController.getPlayersCareerHighs));
+app.get("/api/nba/players/:playerId/season", wrap(nbaSeasonController.getPlayerSeason));
 app.post("/api/nba/players/:playerId/games", wrap(nbaPlayerGamesController.getPlayersGames));
 app.post("/api/nba/players/:playerId/games/last", wrap(nbaPlayerGamesController.getPlayersLastGames));
 app.post("/api/nba/players/:playerId/averages", wrap(nbaPlayerGamesController.getPlayersSeasonAverages));

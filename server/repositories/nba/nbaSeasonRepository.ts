@@ -96,13 +96,11 @@ const getStandings = async () => {
     }).sort((a, b) => b.pct - a.pct || b.wins - a.wins || a.abbreviation.localeCompare(b.abbreviation));
 };
 
-// current season's league leaders: top 10 per game in points, rebounds, assists, steals, blocks and threes,
-// for all players and for rookies only (the same game minimum for both)
-// only players with enough games count (LEADER_MIN_SHARE of the most games played)
+// every player of the current regular season with per game averages, whether they're a rookie, and
+// the game minimum to be ranked (LEADER_MIN_SHARE of the most games played)
 // a rookie's first season is this one (from_year), or without from_year they have no earlier games
-const getLeaders = async (limit = 10) => {
+const getSeasonPlayers = async () => {
     const season = currentSeason();
-
     const players = await sql`
         SELECT
             pg.player_id, p.name,
@@ -114,12 +112,17 @@ const getLeaders = async (limit = 10) => {
                 WHERE e.player_id = pg.player_id AND eg.season < ${season}
             )) AS rookie,
             count(*)::int AS games,
+            round(avg(pg.minutes), 1)::float8 AS minutes,
             round(avg(pg.pts), 1)::float8 AS pts,
             round(avg(pg.reb), 1)::float8 AS reb,
             round(avg(pg.ast), 1)::float8 AS ast,
             round(avg(pg.stl), 1)::float8 AS stl,
             round(avg(pg.blk), 1)::float8 AS blk,
-            round(avg(pg.fg3m), 1)::float8 AS fg3m
+            round(avg(pg.tov), 1)::float8 AS tov,
+            round(avg(pg.fg3m), 1)::float8 AS fg3m,
+            round(100 * sum(pg.fgm)::numeric / nullif(sum(pg.fga), 0), 1)::float8 AS fg_pct,
+            round(100 * sum(pg.fg3m)::numeric / nullif(sum(pg.fg3a), 0), 1)::float8 AS fg3_pct,
+            round(100 * sum(pg.ftm)::numeric / nullif(sum(pg.fta), 0), 1)::float8 AS ft_pct
         FROM nba_player_game pg
         JOIN nba_game g ON g.id = pg.game_id
         JOIN nba_player p ON p.id = pg.player_id
@@ -127,7 +130,13 @@ const getLeaders = async (limit = 10) => {
         GROUP BY pg.player_id, p.name, p.from_year;
     `;
     const mostGames = Math.max(0, ...players.map((p) => p.games as number));
-    const minGames = Math.ceil(mostGames * LEADER_MIN_SHARE);
+    return { season, players, minGames: Math.ceil(mostGames * LEADER_MIN_SHARE) };
+};
+
+// current season's league leaders: top 10 per game in points, rebounds, assists, steals, blocks and threes,
+// for all players and for rookies only (the same game minimum for both)
+const getLeaders = async (limit = 10) => {
+    const { season, players, minGames } = await getSeasonPlayers();
     const qualified = players.filter((p) => p.games >= minGames);
 
     // top players of each stat in the given group
@@ -154,7 +163,47 @@ const getLeaders = async (limit = 10) => {
     };
 };
 
+// one player's current regular season: averages and their rank in each leader stat among the players
+// with enough games (rank = 1 + how many are ahead, so ties share a rank), and among rookies for a rookie
+// ranks are null when the player has fewer games than the minimum; null overall if no games this season
+const getPlayerSeason = async (player_id: number) => {
+    const { season, players, minGames } = await getSeasonPlayers();
+    const player = players.find((p) => p.player_id === player_id);
+    if (!player) return null;
+    const qualifies = player.games >= minGames;
+    const qualified = players.filter((p) => p.games >= minGames);
+    const rankIn = (group: typeof qualified, stat: string) =>
+        1 + group.filter((p) => p[stat] > player[stat]).length;
+
+    return {
+        season,
+        min_games: minGames,
+        qualifies,
+        rookie: player.rookie as boolean,
+        averages: {
+            games: player.games as number,
+            minutes: player.minutes as number | null,
+            pts: player.pts as number,
+            reb: player.reb as number,
+            ast: player.ast as number,
+            stl: player.stl as number,
+            blk: player.blk as number,
+            tov: player.tov as number,
+            fg3m: player.fg3m as number,
+            fg_pct: player.fg_pct as number | null,
+            fg3_pct: player.fg3_pct as number | null,
+            ft_pct: player.ft_pct as number | null,
+        },
+        ranks: Object.fromEntries(LEADER_STATS.map((stat) => [stat, {
+            rank: qualifies ? rankIn(qualified, stat) : null,
+            rookie_rank: qualifies && player.rookie ? rankIn(qualified.filter((p) => p.rookie), stat) : null,
+        }])),
+        qualified_players: qualified.length,
+    };
+};
+
 export {
     getStandings,
     getLeaders,
+    getPlayerSeason,
 };

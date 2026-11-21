@@ -8,6 +8,7 @@ import type { NbaPlayer } from "../types/nba";
 import { ApiError } from "../api/apiClient";
 import PlayerCareer from "../features/sports/nba/PlayerCareer";
 import PlayerCareerHighs from "../features/sports/nba/PlayerCareerHighs";
+import PlayerSeasonCard from "../features/sports/nba/PlayerSeasonCard";
 import PlayerInfo from "../features/sports/nba/PlayerInfo";
 
 function NBAPlayer() {
@@ -73,7 +74,11 @@ function NBAPlayer() {
                         <h2 className="text-xl font-semibold mt-3">Career highs</h2>
                         <PlayerCareerHighs player={player} />
                     </div>
-                    <PlayerInfo player={player} />
+                    {/* side column: bio and this season's averages with league ranks */}
+                    <div className="flex flex-col gap-4 w-full xl:w-80 shrink-0 self-start">
+                        <PlayerInfo player={player} />
+                        <PlayerSeasonCard player_id={player.id} />
+                    </div>
                 </div>
             </div>
         )

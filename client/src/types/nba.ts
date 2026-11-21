@@ -377,3 +377,31 @@ export type NbaTeamHitRateSplits = {
     side: NbaSide;
     splits: NbaHitRateSplit[];
 };
+
+// a player's rank in a leader stat among players with enough games, rookie_rank among rookies (rookies only)
+// null when the player has too few games to be ranked
+export type NbaStatRank = { rank: number | null, rookie_rank: number | null };
+
+// one player's current regular season: averages and ranks in the leader stats
+export type NbaPlayerSeasonRanks = {
+    season: string;
+    min_games: number;
+    qualifies: boolean;            // enough games to be ranked
+    rookie: boolean;
+    averages: {
+        games: number;
+        minutes: number | null;
+        pts: number;
+        reb: number;
+        ast: number;
+        stl: number;
+        blk: number;
+        tov: number;
+        fg3m: number;
+        fg_pct: number | null;
+        fg3_pct: number | null;
+        ft_pct: number | null;
+    };
+    ranks: Record<NbaLeaderStat, NbaStatRank>;
+    qualified_players: number;     // how many players are ranked
+};
