@@ -1,12 +1,13 @@
 import type { NbaGame, NbaHitRateSplit, NbaSide, NbaTeam, NbaTeamHitRate, NbaTeamMarket } from "../../../types/nba";
 import { getAll, getTeamHitRate, getTeamHitRateSplits } from "../../../api/nba/nbaTeamsApi";
 import { getTeamsNextGame } from "../../../api/nba/nbaGamesApi";
-import { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { useCallback, useState, useEffect } from "react";
+import { Link, useSearchParams } from "react-router-dom";
 import { SplitRow } from "./HitRateSplits";
 import AddToParlay from "../../parlays/AddToParlay";
 import { TEAM_MARKETS, betLabel, signed } from "./teamMarkets";
 import { gameDateTime, overtimeLabel } from "../../../utils/nbaGame";
+import { LIMITS, opponentIn, readLimit, readLine, readSide, withBet } from "../../../utils/betParams";
 
 // shared look of the form controls
 const control = "bg-zinc-800 border border-zinc-700 rounded-md px-2 py-1.5 text-zinc-100 focus:outline-none focus:border-sky-500";
@@ -106,7 +107,12 @@ function TeamHitRateResult({ team, result, children }: { team: NbaTeam, result: 
 
 // team and game bets: pick a team, a bet (win, spread, totals, team stats) and a line, see how often it hit
 // game totals are checked from the chosen team's games
+// the checked bet goes to the url (?bet=team&team=...) and is checked again from it when the page opens
 function NBATeamPropChecker() {
+
+    const [searchParams, setSearchParams] = useSearchParams();
+    // the url as the page opened, read once
+    const [initialParams] = useState(() => new URLSearchParams(searchParams));
 
     const [teams, setTeams] = useState<NbaTeam[]>([]);
     const [teamId, setTeamId] = useState<number | null>(null);
@@ -165,34 +171,74 @@ function NBATeamPropChecker() {
         setVsNext(false);
         setResult(null);
         setErrorMessage("");
+        setSearchParams((params) => withBet(params, { bet: "team" }), { replace: true });
     };
 
     // next opponent is the team in the next game that isn't the chosen one
-    const nextOpponent = nextGame && teamId
-        ? (nextGame.home_team_id === teamId
-            ? { id: nextGame.away_team_id, abbreviation: nextGame.away_team, home: true }
-            : { id: nextGame.home_team_id, abbreviation: nextGame.home_team, home: false })
-        : null;
+    const nextOpponent = nextGame && teamId ? opponentIn(nextGame, teamId) : null;
 
-    const calculate = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!teamId || (rules.line && line === "")) return;
+    // checks the bet and puts it in the url (opponent_id = only games vs the next opponent)
+    const check = useCallback(async (bet: { team_id: number, market: NbaTeamMarket, line: number, side: NbaSide, limit: number }, opponent_id?: number) => {
         setCalculating(true);
         setErrorMessage("");
         try {
-            const res = await getTeamHitRate(
-                teamId,
-                { market, line: rules.line ? Number(line) : 0, side: rules.side ? side : "over", limit },
-                vsNext && nextOpponent ? nextOpponent.id : undefined,
-            );
+            const res = await getTeamHitRate(bet.team_id, { market: bet.market, line: bet.line, side: bet.side, limit: bet.limit }, opponent_id);
             setResult(res);
+            setSearchParams((params) => withBet(params, {
+                bet: "team", team: bet.team_id, market: bet.market, line: bet.line, side: bet.side, last: bet.limit, vs: opponent_id !== undefined,
+            }), { replace: true });
         } catch {
             setResult(null);
             setErrorMessage("Couldn't calculate hit rate, please try again");
         } finally {
             setCalculating(false);
         }
+    }, [setSearchParams]);
+
+    const calculate = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!teamId || (rules.line && line === "")) return;
+        await check(
+            { team_id: teamId, market, line: rules.line ? Number(line) : 0, side: rules.side ? side : "over", limit },
+            vsNext && nextOpponent ? nextOpponent.id : undefined,
+        );
     };
+
+    // a bet in the url (e.g. back from signing in): fill the form and check it again
+    useEffect(() => {
+        const team_id = Number(initialParams.get("team"));
+        const urlMarket = TEAM_MARKETS.find((m) => m.value === initialParams.get("market"));
+        const urlLine = urlMarket?.line ? readLine(initialParams) : "0";
+        if (initialParams.get("bet") !== "team" || !team_id || !urlMarket || urlLine === null) return;
+        let cancelled = false;
+        const restore = async () => {
+            const bet = {
+                team_id,
+                market: urlMarket.value,
+                line: Number(urlLine),
+                side: urlMarket.side ? readSide(initialParams) : "over" as NbaSide,
+                limit: readLimit(initialParams),
+            };
+            setTeamId(team_id);
+            setMarket(bet.market);
+            if (urlMarket.line) setLine(urlLine);
+            setSide(bet.side);
+            setLimit(bet.limit);
+            // vs the next opponent: that game is needed first
+            let opponent_id: number | undefined;
+            if (initialParams.get("vs") === "1") {
+                const game = await getTeamsNextGame(team_id).catch(() => null);
+                if (cancelled) return;
+                if (game) {
+                    opponent_id = opponentIn(game, team_id).id;
+                    setVsNext(true);
+                }
+            }
+            await check(bet, opponent_id);
+        };
+        restore();
+        return () => { cancelled = true };
+    }, [initialParams, check]);
 
     const canCalculate = teamId !== null && (!rules.line || line !== "") && !calculating;
 
@@ -252,7 +298,7 @@ function NBATeamPropChecker() {
                     <label className="flex flex-col gap-1">
                         <span className={label}>Last games</span>
                         <select className={control} value={limit} onChange={(e) => setLimit(Number(e.target.value))}>
-                            {[5, 10, 15, 20, 30].map((n) => (
+                            {LIMITS.map((n) => (
                                 <option key={n} value={n}>{n}</option>
                             ))}
                         </select>

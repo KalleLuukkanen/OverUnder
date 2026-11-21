@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { useSearchParams } from "react-router-dom";
+import { withBet } from "../../../utils/betParams";
 import { User, Users } from "lucide-react";
 import NBAPlayerPropChecker from "./NBAPlayerPropChecker";
 import NBATeamPropChecker from "./NBATeamPropChecker";
@@ -11,9 +13,18 @@ const MODES: { value: Mode, label: string, icon: React.ReactNode }[] = [
 ];
 
 // NBA prop checker: a toggle between player props and team / game bets
+// a team bet in the url (?bet=team) opens the team side
 function NBAPropChecker() {
 
-    const [mode, setMode] = useState<Mode>("player");
+    const [searchParams, setSearchParams] = useSearchParams();
+    const [mode, setMode] = useState<Mode>(searchParams.get("bet") === "team" ? "team" : "player");
+
+    // switching side drops the other side's checked bet from the url
+    const changeMode = (next: Mode) => {
+        if (next === mode) return;
+        setMode(next);
+        setSearchParams((params) => withBet(params, next === "team" ? { bet: "team" } : null), { replace: true });
+    };
 
     return (
         <div className="flex flex-col gap-4">
@@ -24,7 +35,7 @@ function NBAPropChecker() {
                         className={`flex items-center gap-1.5 px-3 py-1.5 cursor-pointer ${mode === m.value ? "bg-sky-500 text-on-accent" : "bg-zinc-800 text-zinc-300 hover:bg-zinc-700"}`}
                         type="button"
                         aria-pressed={mode === m.value}
-                        onClick={() => setMode(m.value)}
+                        onClick={() => changeMode(m.value)}
                     >
                         {m.icon}
                         {m.label}

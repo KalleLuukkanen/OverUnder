@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { X } from "lucide-react";
 import { getSeasons } from "../../../api/nba/nbaGamesApi";
 import { getAll } from "../../../api/nba/nbaTeamsApi";
-import { getPlayersCareer } from "../../../api/nba/nbaPlayersApi";
+import { getOne as getPlayer, getPlayersCareer } from "../../../api/nba/nbaPlayersApi";
 import type { NbaPlayer, NbaTeam } from "../../../types/nba";
 import PlayerSearch from "./PlayerSearch";
 import TeamSeasonGames from "./TeamSeasonGames";
@@ -18,9 +18,16 @@ const selectClass = "px-3 py-2 bg-zinc-950 border border-zinc-700 rounded-lg tex
 
 // search a past season: a team's every game, or a player's stat line of every game
 // results show as soon as both the season and the team / player are chosen
+// the choices are kept in the url (?by=player&season=2003-04&player=2544), so signing in
+// (which returns to the same url), refreshing or sharing the link keeps the search
 function SeasonSearch() {
 
-    const [mode, setMode] = useState<Mode>("team");
+    const [searchParams, setSearchParams] = useSearchParams();
+    const [mode, setMode] = useState<Mode>(searchParams.get("by") === "player" ? "player" : "team");
+    // the url's search is restored once the seasons and the player are loaded, only then the url follows the form
+    const [restored, setRestored] = useState(false);
+    // the url as the page opened, read once
+    const [initialParams] = useState(() => new URLSearchParams(searchParams));
 
     // seasons before the previous one need an account, they stay in the list with a lock
     const { data: session } = authClient.useSession();
@@ -32,28 +39,51 @@ function SeasonSearch() {
 
     // team mode: teams of the chosen season, with their names back then
     const [teams, setTeams] = useState<NbaTeam[]>([]);
-    const [teamId, setTeamId] = useState<number | null>(null);
+    const [teamId, setTeamId] = useState<number | null>(() => Number(searchParams.get("team")) || null);
 
     // player mode: the chosen player and the seasons they played
     const [player, setPlayer] = useState<NbaPlayer | null>(null);
     const [playerSeasons, setPlayerSeasons] = useState<string[] | null>(null);
 
+    // seasons and the search in the url: its season if there is one, and its player
     useEffect(() => {
         let cancelled = false;
         const load = async () => {
+            const urlSeason = initialParams.get("season");
+            const urlPlayer = Number(initialParams.get("player"));
             try {
-                const result = await getSeasons();
+                const [result, restoredPlayer] = await Promise.all([
+                    getSeasons(),
+                    urlPlayer ? getPlayer(urlPlayer).catch(() => null) : null,
+                ]);
                 if (!cancelled) {
                     setSeasons(result);
-                    setSeason(result[0] ?? "");
+                    setSeason(urlSeason && result.includes(urlSeason) ? urlSeason : result[0] ?? "");
+                    setPlayer(restoredPlayer);
                 }
             } catch {
                 if (!cancelled) setSeasons([]);
+            } finally {
+                if (!cancelled) setRestored(true);
             }
         };
         load();
         return () => { cancelled = true };
-    }, []);
+    }, [initialParams]);
+
+    // the form's choices into the url, other params (the page's view) stay
+    useEffect(() => {
+        if (!restored) return;
+        setSearchParams((params) => {
+            const next = new URLSearchParams(params);
+            const set = (key: string, value: string | null) => value ? next.set(key, value) : next.delete(key);
+            set("by", mode === "player" ? "player" : null);
+            set("season", season || null);
+            set("team", mode === "team" && teamId ? String(teamId) : null);
+            set("player", mode === "player" && player ? String(player.id) : null);
+            return next;
+        }, { replace: true });
+    }, [restored, mode, season, teamId, player, setSearchParams]);
 
     // the season's teams, a chosen team stays chosen if it played that season too
     useEffect(() => {

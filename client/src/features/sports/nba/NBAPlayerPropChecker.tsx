@@ -1,8 +1,9 @@
 import type { NbaGame, NbaHitRate, NbaPlayer, NbaSide, NbaStat } from "../../../types/nba";
 import { getHitRate } from "../../../api/nba/nbaPlayerGamesApi";
 import { getTeamsNextGame } from "../../../api/nba/nbaGamesApi";
-import { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { getOne as getPlayer } from "../../../api/nba/nbaPlayersApi";
+import { useCallback, useState, useEffect } from "react";
+import { Link, useSearchParams } from "react-router-dom";
 import { X } from "lucide-react";
 import PlayerSearch from "./PlayerSearch";
 import HitRateResult from "./HitRateResult";
@@ -10,13 +11,19 @@ import HitRateSplits from "./HitRateSplits";
 import AddToParlay from "../../parlays/AddToParlay";
 import { STATS } from "./hitRateStats";
 import { gameDateTime } from "../../../utils/nbaGame";
+import { LIMITS, opponentIn, readLimit, readLine, readSide, withBet } from "../../../utils/betParams";
 
 // shared look of the form controls
 const control = "bg-zinc-800 border border-zinc-700 rounded-md px-2 py-1.5 text-zinc-100 focus:outline-none focus:border-sky-500";
 const label = "text-xs font-medium uppercase tracking-wide text-zinc-400";
 
 // quick prop check for any player: pick player, stat, line and side, see how often it hit
+// the checked prop goes to the url and is checked again from it when the page opens
 function NBAPlayerPropChecker() {
+
+    const [searchParams, setSearchParams] = useSearchParams();
+    // the url as the page opened, read once
+    const [initialParams] = useState(() => new URLSearchParams(searchParams));
 
     const [player, setPlayer] = useState<NbaPlayer | null>(null);
 
@@ -57,34 +64,71 @@ function NBAPlayerPropChecker() {
         setVsNext(false);
         setResult(null);
         setErrorMessage("");
+        setSearchParams((params) => withBet(params, null), { replace: true });
     };
 
     // next opponent is the team in the next game that isn't the player's
-    const nextOpponent = nextGame && player
-        ? (nextGame.home_team_id === player.team_id
-            ? { id: nextGame.away_team_id, abbreviation: nextGame.away_team, home: true }
-            : { id: nextGame.home_team_id, abbreviation: nextGame.home_team, home: false })
-        : null;
+    const nextOpponent = nextGame && player?.team_id ? opponentIn(nextGame, player.team_id) : null;
 
-    const calculate = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!player || line === "") return;
+    // checks the prop and puts it in the url (opponent_id = only games vs the next opponent)
+    const check = useCallback(async (bet: { player: NbaPlayer, stat: NbaStat, line: number, side: NbaSide, limit: number }, opponent_id?: number) => {
         setCalculating(true);
         setErrorMessage("");
         try {
-            const res = await getHitRate(
-                player.id,
-                { stat, line: Number(line), side, limit },
-                vsNext && nextOpponent ? nextOpponent.id : undefined,
-            );
+            const res = await getHitRate(bet.player.id, { stat: bet.stat, line: bet.line, side: bet.side, limit: bet.limit }, opponent_id);
             setResult(res);
+            setSearchParams((params) => withBet(params, {
+                player: bet.player.id, stat: bet.stat, line: bet.line, side: bet.side, last: bet.limit, vs: opponent_id !== undefined,
+            }), { replace: true });
         } catch {
             setResult(null);
             setErrorMessage("Couldn't calculate hit rate, please try again");
         } finally {
             setCalculating(false);
         }
+    }, [setSearchParams]);
+
+    const calculate = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!player || line === "") return;
+        await check({ player, stat, line: Number(line), side, limit }, vsNext && nextOpponent ? nextOpponent.id : undefined);
     };
+
+    // a prop in the url (e.g. back from signing in): fill the form and check it again
+    useEffect(() => {
+        const player_id = Number(initialParams.get("player"));
+        const urlStat = STATS.find((s) => s.value === initialParams.get("stat"))?.value;
+        const urlLine = readLine(initialParams);
+        if (initialParams.get("bet") === "team" || !player_id || !urlStat || urlLine === null) return;
+        let cancelled = false;
+        const restore = async () => {
+            try {
+                const restored = await getPlayer(player_id);
+                if (cancelled) return;
+                const bet = { player: restored, stat: urlStat, line: Number(urlLine), side: readSide(initialParams), limit: readLimit(initialParams) };
+                setPlayer(restored);
+                setStat(bet.stat);
+                setLine(urlLine);
+                setSide(bet.side);
+                setLimit(bet.limit);
+                // vs the next opponent: that game is needed first
+                let opponent_id: number | undefined;
+                if (initialParams.get("vs") === "1" && restored.team_id) {
+                    const game = await getTeamsNextGame(restored.team_id).catch(() => null);
+                    if (cancelled) return;
+                    if (game) {
+                        opponent_id = opponentIn(game, restored.team_id).id;
+                        setVsNext(true);
+                    }
+                }
+                await check(bet, opponent_id);
+            } catch {
+                // the player is gone: the form just starts empty
+            }
+        };
+        restore();
+        return () => { cancelled = true };
+    }, [initialParams, check]);
 
     const canCalculate = player !== null && line !== "" && !calculating;
     const statLabel = STATS.find((s) => s.value === stat)?.label;
@@ -152,7 +196,7 @@ function NBAPlayerPropChecker() {
                     <label className="flex flex-col gap-1">
                         <span className={label}>Last games</span>
                         <select className={control} value={limit} onChange={(e) => setLimit(Number(e.target.value))}>
-                            {[5, 10, 15, 20, 30].map((n) => (
+                            {LIMITS.map((n) => (
                                 <option key={n} value={n}>{n}</option>
                             ))}
                         </select>

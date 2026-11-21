@@ -1,13 +1,24 @@
 import type { NbaHitRate, NbaRosterPlayer, NbaSide, NbaStat, NbaTeam } from "../../../types/nba";
 import { getHitRate } from "../../../api/nba/nbaPlayerGamesApi";
 import { getOne, getRoster } from "../../../api/nba/nbaTeamsApi";
-import { useState, useEffect } from "react";
+import { useCallback, useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
+import { LIMITS, readLimit, readLine, readSide, withBet } from "../../../utils/betParams";
 import { STATS } from "./hitRateStats";
 import HitRateResult from "./HitRateResult";
 import HitRateSplits from "./HitRateSplits";
 import AddToParlay from "../../parlays/AddToParlay";
 
+// prop checker of a game page: pick either team's player, a stat and a line
+// the checked prop goes to the url (?team=...&player=...&stat=...) and is checked again when the page opens,
+// so signing in to save it to a parlay comes back to the same result
 function HitRate({ team1_id, team2_id }: { team1_id: number, team2_id?: number }) {
+
+    const [searchParams, setSearchParams] = useSearchParams();
+    // the url as the page opened, read once; its team must be one of the game's
+    const [initialParams] = useState(() => new URLSearchParams(searchParams));
+    const urlTeam = Number(initialParams.get("team"));
+    const initialTeam = urlTeam === team1_id || urlTeam === team2_id ? urlTeam : team1_id;
 
     const [loading, setLoading] = useState(true);
 
@@ -17,15 +28,15 @@ function HitRate({ team1_id, team2_id }: { team1_id: number, team2_id?: number }
     const [team1Roster, setTeam1Roster] = useState<NbaRosterPlayer[]>([]);
     const [team2Roster, setTeam2Roster] = useState<NbaRosterPlayer[]>([]);
 
-    const [rosterSelected, setRosterSelected] = useState<number>(team1_id);
-    const [playerSelected, setPlayerSelected] = useState<number | null>(null);
+    const [rosterSelected, setRosterSelected] = useState<number>(initialTeam);
+    const [playerSelected, setPlayerSelected] = useState<number | null>(() => Number(initialParams.get("player")) || null);
 
-    // bet selections
-    const [stat, setStat] = useState<NbaStat>("pts");
-    const [line, setLine] = useState("");
-    const [side, setSide] = useState<NbaSide>("over");
-    const [limit, setLimit] = useState(10);
-    const [vsOpponent, setVsOpponent] = useState(false);
+    // bet selections, from the url if a prop was checked there
+    const [stat, setStat] = useState<NbaStat>(() => STATS.find((s) => s.value === initialParams.get("stat"))?.value ?? "pts");
+    const [line, setLine] = useState(() => readLine(initialParams) ?? "");
+    const [side, setSide] = useState<NbaSide>(() => readSide(initialParams));
+    const [limit, setLimit] = useState(() => readLimit(initialParams));
+    const [vsOpponent, setVsOpponent] = useState(() => initialParams.get("vs") === "1");
 
     const [calculating, setCalculating] = useState(false);
     const [result, setResult] = useState<NbaHitRate | null>(null);
@@ -71,26 +82,50 @@ function HitRate({ team1_id, team2_id }: { team1_id: number, team2_id?: number }
     // opponent is the team that isn't selected, undefined if there's only one team
     const opponent = rosterSelected === team1_id ? team2 : team1;
 
-    const calculate = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!playerSelected || line === "") return;
+    // checks the prop and puts it in the url (opponent_id = only games vs the other team)
+    const check = useCallback(async (
+        bet: { team_id: number, player_id: number, stat: NbaStat, line: number, side: NbaSide, limit: number },
+        opponent_id?: number,
+    ) => {
         setCalculating(true);
         setErrorMessage("");
         try {
-            const res = await getHitRate(
-                playerSelected,
-                { stat, line: Number(line), side, limit },
-                vsOpponent && opponent ? opponent.id : undefined,
-            );
+            const res = await getHitRate(bet.player_id, { stat: bet.stat, line: bet.line, side: bet.side, limit: bet.limit }, opponent_id);
             setResult(res);
-            setResultPlayer(playerSelected);
+            setResultPlayer(bet.player_id);
+            setSearchParams((params) => withBet(params, {
+                team: bet.team_id, player: bet.player_id, stat: bet.stat, line: bet.line, side: bet.side, last: bet.limit, vs: opponent_id !== undefined,
+            }), { replace: true });
         } catch {
             setResult(null);
             setErrorMessage("Couldn't calculate hit rate, please try again");
         } finally {
             setCalculating(false);
         }
+    }, [setSearchParams]);
+
+    const calculate = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!playerSelected || line === "") return;
+        await check(
+            { team_id: rosterSelected, player_id: playerSelected, stat, line: Number(line), side, limit },
+            vsOpponent && opponent ? opponent.id : undefined,
+        );
     };
+
+    // a prop in the url (e.g. back from signing in): check it again once the rosters are loaded
+    // the form already starts with the url's values
+    useEffect(() => {
+        const player_id = Number(initialParams.get("player"));
+        const urlStat = STATS.find((s) => s.value === initialParams.get("stat"))?.value;
+        const urlLine = readLine(initialParams);
+        if (loading || !player_id || !urlStat || urlLine === null) return;
+        const other = initialTeam === team1_id ? team2_id : team1_id;
+        check(
+            { team_id: initialTeam, player_id, stat: urlStat, line: Number(urlLine), side: readSide(initialParams), limit: readLimit(initialParams) },
+            initialParams.get("vs") === "1" && other ? other : undefined,
+        );
+    }, [loading, initialParams, initialTeam, team1_id, team2_id, check]);
 
     if (loading) return <p className="text-zinc-400">Loading hit rate...</p>;
 
@@ -180,7 +215,7 @@ function HitRate({ team1_id, team2_id }: { team1_id: number, team2_id?: number }
                                 value={limit}
                                 onChange={(e) => setLimit(Number(e.target.value))}
                             >
-                                {[5, 10, 15, 20, 30].map((n) => (
+                                {LIMITS.map((n) => (
                                     <option key={n} value={n}>{n}</option>
                                 ))}
                             </select>
