@@ -1,7 +1,6 @@
 import { Routes, Route } from "react-router-dom";
 import AuthPage from "./features/auth/AuthPage";
 import HomeRedirect from "./pages/HomeRedirect";
-import RequireAuth from "./features/auth/RequireAuth";
 import Layout from "./Layout";
 import NotFoundPage from "./pages/NotFoundPage";
 import NBAPage from "./pages/NBAPage";
@@ -11,7 +10,6 @@ import NBATeam from "./pages/NBATeam";
 import PropCheckerPage from "./pages/PropCheckerPage";
 import ParlaysPage from "./pages/ParlaysPage";
 
-//protected routes inside RequireAuth
 export default function App() {
   return (
     <Routes>
@@ -41,10 +39,6 @@ export default function App() {
           path="/auth"
           element={<AuthPage />}
         />
-        <Route
-          element={<RequireAuth />}
-        >
-        </Route>
         <Route
           path="*"
           element={<NotFoundPage />}
