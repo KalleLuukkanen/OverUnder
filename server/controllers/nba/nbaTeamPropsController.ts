@@ -63,7 +63,22 @@ const getTeamHitRateSplits = async (req: Request, res: Response) => {
     return res.status(200).json(splits);
 };
 
+// the team bet in games each current rotation player missed vs played, body: { market, line?, side? }
+const getTeamPlayerSplits = async (req: Request, res: Response) => {
+    const team_id = Number(req.params.teamId);
+    if (!Number.isInteger(team_id)) {
+        return res.status(400).json({ error: "Missing or invalid team id" });
+    }
+    const bet = readBet(req.body);
+    if ("error" in bet) {
+        return res.status(400).json({ error: bet.error });
+    }
+    const splits = await nbaTeamPropsRepository.getTeamPlayerSplits(team_id, bet.market, bet.line, bet.side);
+    return res.status(200).json(splits);
+};
+
 export {
+    getTeamPlayerSplits,
     getTeamHitRate,
     getTeamHitRateSplits,
 };

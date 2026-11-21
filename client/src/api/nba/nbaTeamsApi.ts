@@ -1,5 +1,5 @@
 import { get, post } from "../apiClient";
-import type { NbaRosterPlayer, NbaSide, NbaTeam, NbaTeamHitRate, NbaTeamHitRateSplits, NbaTeamMarket } from "../../types/nba";
+import type { NbaRosterPlayer, NbaSide, NbaTeam, NbaTeamHitRate, NbaTeamHitRateSplits, NbaTeamMarket, NbaTeamPlayerSplits } from "../../types/nba";
 
 // get all teams, alphabetically
 // with a season ('2007-08'): only that season's teams, with their names back then
@@ -35,6 +35,10 @@ const getTeamHitRateSplits = (
 ) =>
     post<NbaTeamHitRateSplits>(`/api/nba/teams/${teamId}/hit-rate/splits`, { ...bet, opponent_id: opponentId });
 
+// the team bet in games each current rotation player missed vs played, this season and last
+const getTeamPlayerSplits = (teamId: number, bet: { market: NbaTeamMarket; line: number; side: NbaSide }) =>
+    post<NbaTeamPlayerSplits>(`/api/nba/teams/${teamId}/hit-rate/players`, bet);
+
 export {
     getAll,
     getOne,
@@ -42,4 +46,5 @@ export {
     getRoster,
     getTeamHitRate,
     getTeamHitRateSplits,
+    getTeamPlayerSplits,
 };

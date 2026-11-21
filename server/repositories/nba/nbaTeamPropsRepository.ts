@@ -1,5 +1,6 @@
 import postgres from "postgres";
 import { currentSeason, previousSeason } from "./nbaGamesRepository.js";
+import { splitByPlayers } from "./nbaAbsencesRepository.js";
 
 const sql = postgres();
 
@@ -159,7 +160,30 @@ const getTeamHitRateSplits = async (
     return { market, line, side, splits };
 };
 
+// the team bet in games each current rotation player missed vs played, this season and last
+// (e.g. the team's points without its star), see splitByPlayers
+const getTeamPlayerSplits = async (team_id: number, market: Market, line: number, side: Side) => {
+    const seasons = [previousSeason(), currentSeason()];
+    const games = withValues(market, await getTeamGames(team_id, { fromSeason: seasons[0], toSeason: seasons[1] }))
+        .map(({ game, value }) => ({
+            game_id: game.game_id,
+            season: game.season,
+            day: game.game_date.toISOString().slice(0, 10),
+            value,
+        }));
+    const players = (await splitByPlayers(team_id, games, seasons))
+        .map((p) => ({
+            id: p.id,
+            name: p.name,
+            minutes: p.minutes,
+            without: summarize(market, p.without, line, side),
+            with: summarize(market, p.with, line, side),
+        }));
+    return { market, line, side, seasons, players };
+};
+
 export {
+    getTeamPlayerSplits,
     type Market,
     type TeamGameRow,
     MARKETS,

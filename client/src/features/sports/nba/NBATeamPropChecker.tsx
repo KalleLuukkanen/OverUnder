@@ -9,6 +9,7 @@ import { TEAM_MARKETS, betLabel, signed } from "./teamMarkets";
 import { gameDateTime, overtimeLabel } from "../../../utils/nbaGame";
 import { LIMITS, opponentIn, readLimit, readLine, readSide, withBet } from "../../../utils/betParams";
 import useWatchlist from "../../watchlist/useWatchlist";
+import TeamPlayerSplits from "./TeamPlayerSplits";
 import BetValue from "../../props/BetValue";
 import OddsField from "../../props/OddsField";
 import { parseOdds, readOdds } from "../../../utils/odds";
@@ -370,6 +371,7 @@ function NBATeamPropChecker() {
                     <TeamHitRateResult team={team} result={result}>
                         <BetValue hit_rate={result.hit_rate} games={result.games} odds={parseOdds(odds)} />
                         <TeamHitRateSplits team_id={team.id} result={result} opponent_id={nextOpponent?.id} />
+                        <TeamPlayerSplits team_id={team.id} result={result} />
                         <AddToParlay leg={{ team_id: team.id, market: result.market, line: result.line, side: result.side, odds: parseOdds(odds) }} />
                     </TeamHitRateResult> :
                     !errorMessage &&

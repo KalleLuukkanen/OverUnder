@@ -1,5 +1,6 @@
 import postgres from "postgres";
 import { currentSeason, previousSeason } from "./nbaGamesRepository.js";
+import { splitByPlayers, type ValuedGame } from "./nbaAbsencesRepository.js";
 
 const sql = postgres();
 
@@ -243,11 +244,7 @@ const getHitRateSplits = async (
 };
 
 // the same prop in games a current teammate missed vs played, this season and last, on the player's current team
-// a teammate counts only while he was on the team: in seasons he played for it, and not before / after
-// a trade that season (games while he was with another team aren't 'without' him)
-// only rotation players (MIN_MATE_MINUTES+ a game for the team) who missed some of those games, most minutes first
-const MIN_MATE_MINUTES = 15;
-
+// (rotation teammates only, see splitByPlayers)
 const getTeammateSplits = async (player_id: number, stat: string, line: number, side: "over" | "under") => {
     const value = sql.unsafe(STATS[stat]);
     const seasons = [previousSeason(), currentSeason()];
@@ -264,51 +261,13 @@ const getTeammateSplits = async (player_id: number, stat: string, line: number, 
         JOIN nba_game g ON g.id = pg.game_id
         WHERE pg.player_id = ${player_id} AND pg.team_id = ${team_id} AND g.season IN ${sql(seasons)};
     `;
-    // every game of the current teammates in those seasons, for any team
-    const mateGames = await sql`
-        SELECT p.id AS player_id, p.name, pg.game_id, pg.team_id, pg.minutes::float8 AS minutes, g.season, to_char(g.game_date, 'YYYY-MM-DD') AS day
-        FROM nba_player p
-        JOIN nba_player_game pg ON pg.player_id = p.id
-        JOIN nba_game g ON g.id = pg.game_id
-        WHERE p.team_id = ${team_id} AND p.id <> ${player_id} AND g.season IN ${sql(seasons)};
-    `;
-
-    // teammate id -> name and games
-    const mates = new Map<number, { name: string, rows: postgres.Row[] }>();
-    for (const row of mateGames) {
-        const mate = mates.get(row.player_id) ?? { name: row.name as string, rows: [] };
-        mate.rows.push(row);
-        mates.set(row.player_id, mate);
-    }
 
     const summary = (values: number[]) => {
         const { games, hits, hit_rate, average } = summarize("", "", values, line, side);
         return { games, hits, hit_rate, average };
     };
-
-    const teammates = [...mates.entries()].map(([id, mate]) => {
-        const played = new Set(mate.rows.map((r) => r.game_id as string));
-        const without: number[] = [];
-        const withMate: number[] = [];
-        for (const season of seasons) {
-            const own = mate.rows.filter((r) => r.season === season && r.team_id === team_id).map((r) => r.day as string).sort();
-            if (own.length === 0) continue;
-            const other = mate.rows.filter((r) => r.season === season && r.team_id !== team_id).map((r) => r.day as string);
-            // on the team between his last game elsewhere before joining and his first game elsewhere after leaving
-            const from = other.filter((d) => d < own[0]).sort().at(-1) ?? "";
-            const to = other.filter((d) => d > own[own.length - 1]).sort()[0] ?? "9999";
-            for (const g of games) {
-                if (g.season !== season || g.day <= from || g.day >= to) continue;
-                (played.has(g.game_id) ? withMate : without).push(g.value as number);
-            }
-        }
-        // his minutes a game for this team, how big a part of the team he is
-        const forTeam = mate.rows.filter((r) => r.team_id === team_id);
-        const minutes = forTeam.reduce((sum, r) => sum + (r.minutes ?? 0), 0) / Math.max(forTeam.length, 1);
-        return { id, name: mate.name, minutes: Math.round(minutes * 10) / 10, without: summary(without), with: summary(withMate) };
-    })
-        .filter((t) => t.minutes >= MIN_MATE_MINUTES && t.without.games > 0)
-        .sort((a, b) => b.minutes - a.minutes);
+    const teammates = (await splitByPlayers(team_id, games as unknown as ValuedGame[], seasons, player_id))
+        .map((t) => ({ id: t.id, name: t.name, minutes: t.minutes, without: summary(t.without), with: summary(t.with) }));
 
     return { ...empty, teammates };
 };

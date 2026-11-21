@@ -368,6 +368,15 @@ export type NbaLeaders = {
 // the rest over / under a line
 export type NbaTeamMarket = "win" | "spread" | "team_pts" | "opp_pts" | "total" | "h1_total" | "team_fg3m" | "team_reb";
 
+// a team bet in games each current rotation player missed vs played
+export type NbaTeamPlayerSplits = {
+    market: NbaTeamMarket;
+    line: number;
+    side: NbaSide;
+    seasons: string[];   // last season and this one
+    players: NbaTeammateSplits["teammates"];
+};
+
 export type NbaTeamHitRate = {
     market: NbaTeamMarket;
     line: number;
