@@ -9,6 +9,7 @@ import NBAPlayer from "./pages/NBAPlayer";
 import NBATeam from "./pages/NBATeam";
 import PropCheckerPage from "./pages/PropCheckerPage";
 import ParlaysPage from "./pages/ParlaysPage";
+import AccuracyPage from "./pages/AccuracyPage";
 
 export default function App() {
   return (
@@ -34,6 +35,10 @@ export default function App() {
         <Route
           path="/parlays"
           element={<ParlaysPage />}
+        />
+        <Route
+          path="/accuracy"
+          element={<AccuracyPage />}
         />
         <Route
           path="/auth"

@@ -293,6 +293,22 @@ type ParlayLegBase = {
         season: NbaHitRateSplit | null;
         opponent: NbaHitRateSplit | null;
     };
+    estimate: LegEstimate;         // the chance before the game, from the server's estimator
+};
+
+// one sample's part in a leg's estimate
+export type EstimatePart = {
+    key: "last10" | "season" | "opponent";
+    label: string;
+    hits: number;
+    games: number;
+    adjusted: number;              // 0-1, after the pull toward 50%
+    weight: number;                // 0-1, after leaving out missing samples
+};
+
+export type LegEstimate = {
+    chance: number | null;         // 0-1, null if there's nothing to estimate from
+    parts: EstimatePart[];
 };
 
 // a player prop, e.g. Anthony Edwards over 25.5 points
@@ -461,4 +477,53 @@ export type NbaWatchedTeam = {
 export type NbaWatchlist = {
     players: NbaWatchedPlayer[];
     teams: NbaWatchedTeam[];
+};
+
+// a calibration bucket: bets whose chance (of the side we'd bet, 50%+) fell in [from, to)
+export type CalibrationBucket = {
+    from: number;
+    to: number;
+    count: number;
+    predicted: number;             // average chance, 0-1
+    actual: number;                // share that hit, 0-1
+};
+
+export type CalibrationScore = {
+    samples: number;
+    brier: number | null;          // lower is better, always saying 50% gives 0.25
+    picks_hit: number | null;      // how often the side we'd bet hit, 0-1
+    buckets: CalibrationBucket[];
+};
+
+// one bet type in the backtest: a player stat or a team market
+export type BacktestGroup = CalibrationScore & {
+    key: string;
+    kind: "player" | "team";
+    baselines: { coin_flip: number, last10: number | null, season: number | null };
+};
+
+export type BacktestReport = {
+    model: { name: string, weights: Record<"last10" | "season" | "opponent", number>, prior: { hits: number, games: number } };
+    seasons: string[];
+    line_rule: string;
+    totals: { player: BacktestGroup, team: BacktestGroup };
+    groups: BacktestGroup[];
+    created_at: string;
+};
+
+// real settled parlay legs, with the bookmaker comparison for legs that have odds
+export type LegsCalibration = CalibrationScore & {
+    odds: {
+        legs: number;
+        brier: number | null;          // ours on the legs with odds
+        bookmaker_brier: number | null; // 1 / odds as the chance
+        roi: number;                   // return per unit on every leg, -0.1 = lost 10%
+        value_legs: number;            // legs the estimate saw value in
+        value_roi: number | null;
+    } | null;
+};
+
+export type Calibration = {
+    backtest: BacktestReport | null;
+    legs: { all: LegsCalibration, mine: LegsCalibration | null };
 };

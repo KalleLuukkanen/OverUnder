@@ -1,6 +1,8 @@
 import postgres from "postgres";
 import { getHitRateSplits } from "./nba/nbaPlayerGamesRepository.js";
 import { getTeamHitRateSplits, isHit, MARKETS, type Market, type TeamGameRow } from "./nba/nbaTeamPropsRepository.js";
+import { estimate, type Estimate } from "../estimate.js";
+import { Scorer } from "../calibration.js";
 
 const sql = postgres();
 
@@ -62,20 +64,39 @@ const gradeParlay = (statuses: LegStatus[]) => {
     return statuses.includes("hit") ? "won" : "void";
 };
 
-// every parlay of the user with its legs, newest first
-// legs come with the game, the result once played and the prop's hit rates (last 5 / 10, season, vs opponent)
-const getParlays = async (user_id: string) => {
-    const parlays = await sql`
-        SELECT id, name, odds::float8 AS odds, created_at
-        FROM parlay
-        WHERE user_id = ${user_id}
-        ORDER BY created_at DESC;
-    `;
-    if (parlays.length === 0) return [];
+type HitRate = { hits: number, games: number, hit_rate: number | null, average: number | null };
+type LegSplits = {
+    hit_rates: { last5: HitRate | null, last10: HitRate | null, season: HitRate | null, opponent: HitRate | null };
+    estimate: Estimate;
+};
 
+// a settled leg's hit rates and estimate never change (they only count games before its game),
+// so they're kept here by leg id instead of being counted again on every request
+const settledSplits = new Map<number, LegSplits>();
+
+// the hit rates (last 5 / 10, season, vs opponent) of a leg as they were before its game, with its estimate
+const legSplits = async (leg: postgres.Row, isTeam: boolean, opponent_id: number | null, opponent: string | null): Promise<LegSplits> => {
+    const before = leg.game_id ? { date: leg.game_day as string, season: leg.season as string } : undefined;
+    const splits = isTeam ?
+        await getTeamHitRateSplits(leg.team_id, leg.market as Market, leg.line, leg.side as Side, opponent_id ?? undefined, before) :
+        await getHitRateSplits(leg.player_id, leg.stat, leg.line, leg.side as Side, opponent_id ?? undefined, before);
+    const rate = (key: string) => splits.splits.find((s) => s.key === key) ?? null;
+    const hit_rates = { last5: rate("last5"), last10: rate("last10"), season: rate("season"), opponent: rate("opponent") };
+    return {
+        hit_rates,
+        estimate: estimate([
+            { key: "last10", label: "Last 10", sample: hit_rates.last10 },
+            { key: "season", label: "Season", sample: hit_rates.season },
+            { key: "opponent", label: opponent ? `vs ${opponent}` : "vs opponent", sample: hit_rates.opponent },
+        ]),
+    };
+};
+
+// legs matching the condition with the game, the result once played, the hit rates and the estimate
+const loadLegs = async (where: postgres.PendingQuery<postgres.Row[]>) => {
     const legs = await sql`
         SELECT
-            l.id, l.parlay_id, l.player_id, p.name AS player_name, l.stat, l.market, l.line::float8 AS line, l.side, l.odds::float8 AS odds, l.game_id,
+            l.id, l.parlay_id, pr.user_id, l.player_id, p.name AS player_name, l.stat, l.market, l.line::float8 AS line, l.side, l.odds::float8 AS odds, l.game_id,
             g.game_date, g.game_date::text AS game_day, g.season, g.start_time, g.home_score, g.away_score, g.overtime_periods,
             g.home_team_id, nba_team_abbreviation(g.home_team_id, g.season) AS home_team,
             g.away_team_id, nba_team_abbreviation(g.away_team_id, g.season) AS away_team,
@@ -87,27 +108,25 @@ const getParlays = async (user_id: string) => {
             pg.fgm, pg.fga, pg.fg3m, pg.fg3a, pg.ftm, pg.fta,
             tg.fg3m AS team_fg3m, tg.reb AS team_reb, tg.q1 + tg.q2 + og.q1 + og.q2 AS h1_total
         FROM parlay_leg l
+        JOIN parlay pr ON pr.id = l.parlay_id
         LEFT JOIN nba_player p ON p.id = l.player_id
         LEFT JOIN nba_game g ON g.id = l.game_id
         LEFT JOIN nba_player_game pg ON pg.game_id = l.game_id AND pg.player_id = l.player_id
         LEFT JOIN nba_team_game tg ON tg.game_id = l.game_id AND tg.team_id = l.team_id
         LEFT JOIN nba_team_game og ON og.game_id = l.game_id AND l.team_id IS NOT NULL AND og.team_id <> l.team_id
-        WHERE l.parlay_id IN ${sql(parlays.map((p) => p.id))}
+        WHERE ${where}
         ORDER BY l.created_at;
     `;
 
-    const gradedLegs = await Promise.all(legs.map(async (leg) => {
+    return Promise.all(legs.map(async (leg) => {
         const isTeam = leg.market !== null;
         const { status, value } = isTeam ? gradeTeamLeg(leg) : gradeLeg(leg);
         const isHome = leg.game_id ? leg.team_id === leg.home_team_id : null;
         const opponent_id = leg.game_id ? (isHome ? leg.away_team_id : leg.home_team_id) : null;
-        // hit rates as they were before the leg's game, so a played leg keeps its pre-game estimate
-        const before = leg.game_id ? { date: leg.game_day as string, season: leg.season as string } : undefined;
-        const splits = isTeam ?
-            await getTeamHitRateSplits(leg.team_id, leg.market as Market, leg.line, leg.side as Side, opponent_id ?? undefined, before) :
-            await getHitRateSplits(leg.player_id, leg.stat, leg.line, leg.side as Side, opponent_id ?? undefined, before);
-        // only the samples shown with a leg
-        const rate = (key: string) => splits.splits.find((s) => s.key === key) ?? null;
+        const opponent = leg.game_id ? (isHome ? leg.away_team : leg.home_team) as string : null;
+        const settled = status !== "pending" && status !== "no_game";
+        const splits = (settled && settledSplits.get(leg.id)) || await legSplits(leg, isTeam, opponent_id, opponent);
+        if (settled) settledSplits.set(leg.id, splits);
         // what the leg is about: a player's stat or a team's bet
         const subject = isTeam ? {
             kind: "team" as const,
@@ -130,6 +149,7 @@ const getParlays = async (user_id: string) => {
         return {
             id: leg.id as number,
             parlay_id: leg.parlay_id as number,
+            user_id: leg.user_id as string,
             ...subject,
             line: leg.line as number,
             side: leg.side as Side,
@@ -139,22 +159,34 @@ const getParlays = async (user_id: string) => {
                 game_date: leg.game_date as Date,
                 start_time: leg.start_time as Date | null,
                 is_home: isHome,
-                opponent: (isHome ? leg.away_team : leg.home_team) as string,
+                opponent: opponent as string,
                 opponent_id,
             } : null,
             status,
             value,
-            hit_rates: {
-                last5: rate("last5"),
-                last10: rate("last10"),
-                season: rate("season"),
-                opponent: rate("opponent"),
-            },
+            ...splits,
         };
     }));
+};
+
+// every parlay of the user with its legs, newest first
+// legs come with the game, the result once played, the prop's hit rates (last 5 / 10, season, vs opponent)
+// and the estimated chance before the game
+const getParlays = async (user_id: string) => {
+    const parlays = await sql`
+        SELECT id, name, odds::float8 AS odds, created_at
+        FROM parlay
+        WHERE user_id = ${user_id}
+        ORDER BY created_at DESC;
+    `;
+    if (parlays.length === 0) return [];
+
+    const legs = (await loadLegs(sql`l.parlay_id IN ${sql(parlays.map((p) => p.id))}`))
+        // the user id is only needed for the accuracy report
+        .map(({ user_id: _, ...leg }) => leg);
 
     return parlays.map((p) => {
-        const parlayLegs = gradedLegs.filter((l) => l.parlay_id === p.id);
+        const parlayLegs = legs.filter((l) => l.parlay_id === p.id);
         return {
             id: p.id as number,
             name: p.name as string,
@@ -164,6 +196,65 @@ const getParlays = async (user_id: string) => {
             legs: parlayLegs,
         };
     });
+};
+
+// how the estimates of real parlay legs did: every member's hit or missed legs, and the user's own (when signed in)
+// the same bet in several parlays counts once (per user), pushes and DNPs are left out
+// with odds: the bookmaker's implied chance scored the same way, and the return of 1 unit on each leg
+// (all of them, and only the ones the estimate saw value in)
+const getLegsCalibration = async (user_id?: string) => {
+    const legs = await loadLegs(sql`g.home_score IS NOT NULL`);
+    const seen = new Set<string>();
+    const settled = legs.filter((l) => {
+        if ((l.status !== "hit" && l.status !== "miss") || l.estimate.chance === null) return false;
+        const subject = l.kind === "player" ? `p${l.player_id}:${l.stat}` : `t${l.team_id}:${l.market}`;
+        const key = `${l.user_id}:${l.game?.id}:${subject}:${l.line}:${l.side}`;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+    });
+
+    const report = (list: typeof settled) => {
+        const ours = new Scorer(0.1);
+        const withOdds = list.filter((l) => l.odds !== null);
+        const oursWithOdds = new Scorer(0.1);
+        const bookmaker = new Scorer(0.1);
+        let returned = 0;
+        let valueBets = 0;
+        let valueReturned = 0;
+        for (const l of list) {
+            const chance = l.estimate.chance as number;
+            const hit = l.status === "hit";
+            ours.add(chance, hit);
+            if (l.odds === null) continue;
+            oursWithOdds.add(chance, hit);
+            bookmaker.add(Math.min(1 / l.odds, 1), hit);
+            const profit = hit ? l.odds - 1 : -1;
+            returned += profit;
+            // the estimate saw value: chance x odds above 1
+            if (chance * l.odds > 1) {
+                valueBets++;
+                valueReturned += profit;
+            }
+        }
+        const round = (value: number) => Math.round(value * 10000) / 10000;
+        return {
+            ...ours.score(),
+            odds: withOdds.length === 0 ? null : {
+                legs: withOdds.length,
+                brier: oursWithOdds.brier() === null ? null : round(oursWithOdds.brier() as number),
+                bookmaker_brier: bookmaker.brier() === null ? null : round(bookmaker.brier() as number),
+                roi: round(returned / withOdds.length),
+                value_legs: valueBets,
+                value_roi: valueBets ? round(valueReturned / valueBets) : null,
+            },
+        };
+    };
+
+    return {
+        all: report(settled),
+        mine: user_id ? report(settled.filter((l) => l.user_id === user_id)) : null,
+    };
 };
 
 // how many parlays the user has, used for the per user limit
@@ -334,6 +425,7 @@ const deleteLeg = async (parlay_id: number, leg_id: number) => {
 
 export {
     getParlays,
+    getLegsCalibration,
     countParlays,
     createParlay,
     isOwner,

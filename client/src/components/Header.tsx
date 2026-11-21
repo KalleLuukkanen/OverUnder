@@ -1,11 +1,11 @@
 import { Link, NavLink, useLocation } from "react-router-dom";
-import { LogIn, Target, CircleUser, Layers } from "lucide-react";
+import { LogIn, Target, CircleUser, Layers, Gauge } from "lucide-react";
 import ThemeToggle from "./ThemeToggle";
 import LeagueSwitcher from "./LeagueSwitcher";
 import Logo from "./Logo";
 import { authClient } from "../utils/auth";
 
-// logo, prop checker and parlays on the left; league, theme and account on the right
+// logo, prop checker, parlays and accuracy on the left; league, theme and account on the right
 function Header() {
     const { data: session } = authClient.useSession();
     // the auth page returns here after signing in (not when already on the auth page)
@@ -36,6 +36,14 @@ function Header() {
                 >
                     <Layers size={16} />
                     <span className="hidden sm:inline">Parlays</span>
+                </NavLink>
+                <NavLink
+                    className={({ isActive }) => `flex items-center gap-1.5 -ml-4 px-3 py-1.5 rounded-md hover:bg-zinc-800 hover:text-white ${isActive ? "bg-zinc-800 text-white" : "text-zinc-300"}`}
+                    to="/accuracy"
+                    title="How accurate the estimated chances are"
+                >
+                    <Gauge size={16} />
+                    <span className="hidden sm:inline">Accuracy</span>
                 </NavLink>
                 <LeagueSwitcher className="ml-auto -mr-4" />
                 <ThemeToggle className="-mr-4" />

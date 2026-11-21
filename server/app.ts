@@ -12,6 +12,7 @@ import * as nbaSeasonController from "./controllers/nba/nbaSeasonController.js";
 import * as nbaTeamPropsController from "./controllers/nba/nbaTeamPropsController.js";
 import * as parlayController from "./controllers/parlayController.js";
 import * as watchlistController from "./controllers/watchlistController.js";
+import * as calibrationController from "./controllers/calibrationController.js";
 
 const app = express();
 
@@ -118,6 +119,9 @@ app.put("/api/watchlist/players/:playerId", wrap(watchlistController.addPlayer))
 app.delete("/api/watchlist/players/:playerId", wrap(watchlistController.removePlayer));
 app.put("/api/watchlist/teams/:teamId", wrap(watchlistController.addTeam));
 app.delete("/api/watchlist/teams/:teamId", wrap(watchlistController.removeTeam));
+
+// accuracy of the estimated chances: backtest report and real legs' results
+app.get("/api/calibration", wrap(calibrationController.getCalibration));
 
 // errors of every route end up here (async ones through wrap): logged, and the client gets a 500
 // instead of the server crashing. The four arguments mark it as Express's error handler

@@ -1,7 +1,8 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Info } from "lucide-react";
 import type { ParlayLeg } from "../../types/nba";
-import { estimateLeg, estimateParlay, percent, WEIGHTS } from "./parlayEstimate";
+import { Link } from "react-router-dom";
+import { estimateLeg, estimateParlay, percent } from "./parlayEstimate";
 import { legName } from "./legLabels";
 
 // ⓘ next to the estimated chance: hovering or clicking shows how it was calculated,
@@ -73,9 +74,8 @@ function EstimateInfo({ legs }: { legs: ParlayLeg[] }) {
                     <p className="font-semibold text-zinc-100">How the chance is estimated</p>
                     <ol className="flex flex-col gap-1.5 list-decimal pl-4 text-zinc-400">
                         <li>
-                            Each leg blends its hit rates: last 10 games {WEIGHTS.last10 * 100}%,
-                            this season {WEIGHTS.season * 100}%, vs the opponent {WEIGHTS.opponent * 100}%.
-                            Missing samples are left out.
+                            Each leg blends its hit rates over the last 10 games, this season and vs the opponent,
+                            weighted as shown below. Missing samples are left out.
                         </li>
                         <li>
                             Small samples are pulled toward 50% by counting one extra hit and one extra miss,
@@ -112,6 +112,7 @@ function EstimateInfo({ legs }: { legs: ParlayLeg[] }) {
                         <span>All legs multiplied</span>
                         <span className="font-semibold tabular-nums">{total === null ? "–" : percent(total)}</span>
                     </p>
+                    <Link className="text-xs text-sky-400 hover:underline" to="/accuracy">How accurate are these chances? →</Link>
                 </div>
             }
         </div>
