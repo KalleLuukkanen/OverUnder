@@ -7,6 +7,7 @@ import { useState, useEffect } from "react";
 import type { NbaPlayer } from "../types/nba";
 import { ApiError } from "../api/apiClient";
 import PlayerCareer from "../features/sports/nba/PlayerCareer";
+import PlayerCareerHighs from "../features/sports/nba/PlayerCareerHighs";
 import PlayerInfo from "../features/sports/nba/PlayerInfo";
 
 function NBAPlayer() {
@@ -69,6 +70,8 @@ function NBAPlayer() {
                         <PlayerRecentGames player_id={player.id} />
                         <h2 className="text-xl font-semibold mt-3">Career averages</h2>
                         <PlayerCareer player_id={player.id} />
+                        <h2 className="text-xl font-semibold mt-3">Career highs</h2>
+                        <PlayerCareerHighs player={player} />
                     </div>
                     <PlayerInfo player={player} />
                 </div>

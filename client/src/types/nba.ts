@@ -223,6 +223,27 @@ export type NbaPlayerCareerPart = {
     career: NbaCareerAverages | null;
 };
 
+// a player's best game in one stat, the first game it was reached and how many games reached it
+export type NbaCareerHigh = {
+    stat: "pts" | "reb" | "ast" | "stl" | "blk" | "fg3m" | "fgm" | "ftm";
+    value: number;
+    times: number;
+    game: {
+        id: string;
+        game_date: string;
+        season: string;
+        is_home: boolean;
+        opponent: string;          // abbreviation of that season
+        opponent_id: number;
+    };
+};
+
+// career highs of the regular season and the playoffs, stats without a single made one left out
+export type NbaCareerHighs = {
+    regular: NbaCareerHigh[];
+    playoffs: NbaCareerHigh[];
+};
+
 export type NbaPlayerCareer = {
     regular: NbaPlayerCareerPart;
     playoffs: NbaPlayerCareerPart;

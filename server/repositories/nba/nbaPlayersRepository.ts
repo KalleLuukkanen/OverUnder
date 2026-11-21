@@ -106,7 +106,61 @@ const getPlayersCareer = async (player_id: number, season_type: "regular" | "pla
     return result[0];
 };
 
+// stats with career highs, the game's value from the box score line
+const HIGH_STATS = ["pts", "reb", "ast", "stl", "blk", "fg3m", "fgm", "ftm"] as const;
+
+// player's best game in each stat, regular season ('2' in the game id) or playoffs ('4'), like the season averages
+// the first game it was reached, and how many times; box scores go back to 1996-97
+const getPlayersCareerHighs = async (player_id: number, season_type: "regular" | "playoffs") => {
+    const typeDigit = season_type === "regular" ? "2" : "4";
+    const result = await sql`
+        WITH values AS (
+            SELECT
+                s.stat, pg.game_id, g.game_date, g.season, pg.is_home, pg.opponent_id,
+                nba_team_abbreviation(pg.opponent_id, g.season) AS opponent,
+                CASE s.stat
+                    WHEN 'pts' THEN pg.pts WHEN 'reb' THEN pg.reb WHEN 'ast' THEN pg.ast
+                    WHEN 'stl' THEN pg.stl WHEN 'blk' THEN pg.blk WHEN 'fg3m' THEN pg.fg3m
+                    WHEN 'fgm' THEN pg.fgm WHEN 'ftm' THEN pg.ftm
+                END AS value
+            FROM nba_player_game pg
+            JOIN nba_game g ON g.id = pg.game_id
+            CROSS JOIN unnest(string_to_array(${HIGH_STATS.join(",")}, ',')) AS s(stat)
+            WHERE pg.player_id = ${player_id} AND substring(g.id, 3, 1) = ${typeDigit}
+        ),
+        -- the high and how many games reached it
+        highs AS (
+            SELECT stat, max(value) AS high FROM values GROUP BY stat
+        )
+        SELECT DISTINCT ON (v.stat)
+            v.stat, v.value, v.game_id, v.game_date, v.season, v.is_home, v.opponent, v.opponent_id,
+            (SELECT count(*)::int FROM values c WHERE c.stat = v.stat AND c.value = h.high) AS times
+        FROM values v
+        JOIN highs h ON h.stat = v.stat AND v.value = h.high
+        WHERE h.high > 0
+        ORDER BY v.stat, v.game_date;
+    `;
+    // in the order of HIGH_STATS
+    return HIGH_STATS.flatMap((stat) => {
+        const row = result.find((r) => r.stat === stat);
+        return row ? [{
+            stat,
+            value: row.value as number,
+            times: row.times as number,
+            game: {
+                id: row.game_id as string,
+                game_date: row.game_date as Date,
+                season: row.season as string,
+                is_home: row.is_home as boolean,
+                opponent: row.opponent as string,
+                opponent_id: row.opponent_id as number,
+            },
+        }] : [];
+    });
+};
+
 export {
+    getPlayersCareerHighs,
     getOne,
     getByName,
     searchPlayers,

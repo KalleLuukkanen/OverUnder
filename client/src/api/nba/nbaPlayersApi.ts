@@ -1,5 +1,5 @@
 import { get, post } from "../apiClient";
-import type { NbaPlayer, NbaPlayerCareer } from "../../types/nba";
+import type { NbaCareerHighs, NbaPlayer, NbaPlayerCareer } from "../../types/nba";
 
 // get one player based on id
 const getOne = (playerId: number) =>
@@ -18,7 +18,12 @@ const searchPlayers = (query: string, limit?: number, activeOnly = false) =>
 const getPlayersCareer = (playerId: number) =>
     get<NbaPlayerCareer>(`/api/nba/players/${playerId}/career`);
 
+// get player's best game in each stat, regular season and playoffs
+const getPlayersCareerHighs = (playerId: number) =>
+    get<NbaCareerHighs>(`/api/nba/players/${playerId}/career-highs`);
+
 export {
+    getPlayersCareerHighs,
     getOne,
     getByName,
     searchPlayers,

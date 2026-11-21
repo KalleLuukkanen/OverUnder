@@ -60,7 +60,21 @@ const getPlayersCareer = async (req: Request, res: Response) => {
     });
 };
 
+// player's career highs (best game per stat), regular season and playoffs
+const getPlayersCareerHighs = async (req: Request, res: Response) => {
+    const player_id = Number(req.params.playerId);
+    if (!Number.isInteger(player_id)) {
+        return res.status(400).json({ error: "Missing or invalid player id" });
+    }
+    const [regular, playoffs] = await Promise.all([
+        nbaPlayersRepository.getPlayersCareerHighs(player_id, "regular"),
+        nbaPlayersRepository.getPlayersCareerHighs(player_id, "playoffs"),
+    ]);
+    return res.status(200).json({ regular, playoffs });
+};
+
 export {
+    getPlayersCareerHighs,
     getOne,
     getByName,
     searchPlayers,
