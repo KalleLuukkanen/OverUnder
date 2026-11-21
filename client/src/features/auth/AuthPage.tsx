@@ -3,6 +3,8 @@ import { authClient } from "../../utils/auth";
 import { useState, type FormEvent } from "react";
 import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import Loading from "../../components/Loading";
+import { useLeague } from "../../context/LeagueContext";
+import { SPORTS } from "../../types/leagues";
 
 const input = "w-full rounded-md border border-zinc-700 bg-zinc-800 p-2 text-zinc-100 placeholder:text-zinc-500 focus:outline-none focus:border-sky-500";
 
@@ -12,6 +14,38 @@ function HomeLink() {
         <Link className="flex items-center gap-2 w-fit px-2 py-1.5 -ml-2 rounded-md text-zinc-400 hover:bg-zinc-800 hover:text-white" to="/">
             <ArrowLeft size={18} /> Back to home
         </Link>
+    )
+}
+
+// the league the home page opens, saved in this browser
+// every league is listed, the ones that aren't ready yet can't be picked
+function DefaultLeague() {
+
+    const { defaultLeague, setDefaultLeague } = useLeague();
+    const [saved, setSaved] = useState(false);
+
+    return (
+        <label className="flex flex-col gap-1.5 pt-4 border-t border-zinc-800">
+            <span className="text-sm font-medium text-zinc-300">Default league</span>
+            <select
+                className={`${input} [color-scheme:dark] cursor-pointer`}
+                value={defaultLeague}
+                onChange={(e) => { setDefaultLeague(e.target.value); setSaved(true); }}
+            >
+                {SPORTS.map((s) => (
+                    <optgroup key={s.sport} label={`${s.emoji} ${s.sport}`}>
+                        {s.leagues.map((l) => (
+                            <option key={l.slug} value={l.slug} disabled={!l.available}>
+                                {l.name}{l.available ? "" : " (soon)"}
+                            </option>
+                        ))}
+                    </optgroup>
+                ))}
+            </select>
+            <span className="text-xs text-zinc-500">
+                {saved ? "Saved. " : ""}The home page opens this league. You can still switch leagues from the top right.
+            </span>
+        </label>
     )
 }
 
@@ -89,6 +123,7 @@ function AuthPage() {
                         <dt className="text-zinc-400">Access</dt>
                         <dd className="text-zinc-100">All past seasons</dd>
                     </dl>
+                    <DefaultLeague />
                     <div className="flex flex-col gap-2 pt-4 border-t border-zinc-800">
                         <button
                             className="flex items-center justify-center gap-2 rounded-md bg-zinc-800 hover:bg-zinc-700 px-4 py-2 text-zinc-100 cursor-pointer"

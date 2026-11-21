@@ -1,6 +1,6 @@
 import { Routes, Route } from "react-router-dom";
 import AuthPage from "./features/auth/AuthPage";
-import MainPage from "./pages/MainPage";
+import HomeRedirect from "./pages/HomeRedirect";
 import RequireAuth from "./features/auth/RequireAuth";
 import Layout from "./Layout";
 import NotFoundPage from "./pages/NotFoundPage";
@@ -20,7 +20,7 @@ export default function App() {
       >
         <Route
           path="/"
-          element={<MainPage />}
+          element={<HomeRedirect />}
         />
         <Route
           path="/props"
