@@ -12,6 +12,6 @@ vi.mock("./utils/auth", () => ({
 }));
 
 test("renders sign-in form when logged out", () => {
-  render(<MemoryRouter><App /></MemoryRouter>);
+  render(<MemoryRouter initialEntries={["/auth"]}><App /></MemoryRouter>);
   expect(screen.getByRole("heading", { name: "Sign in" })).toBeInTheDocument();
 });
