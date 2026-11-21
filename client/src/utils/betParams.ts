@@ -1,9 +1,9 @@
 import type { NbaGame, NbaSide } from "../types/nba";
 
-// url params of a checked bet, e.g. ?player=1630162&stat=pts&line=24.5&side=over&last=10&vs=1
+// url params of a checked bet, e.g. ?player=1630162&stat=pts&line=24.5&side=over&last=10&vs=1&odds=1.85
 // the checkers write them after a check and re-run the check from them when the page opens,
 // so signing in (which returns to the same url), refreshing or sharing a link keeps the bet
-export const BET_KEYS = ["bet", "player", "team", "stat", "market", "line", "side", "last", "vs"] as const;
+export const BET_KEYS = ["bet", "player", "team", "stat", "market", "line", "side", "last", "vs", "odds"] as const;
 
 type BetValues = Partial<Record<typeof BET_KEYS[number], string | number | boolean | null>>;
 

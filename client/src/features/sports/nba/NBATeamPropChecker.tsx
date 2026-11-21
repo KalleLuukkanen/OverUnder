@@ -9,6 +9,9 @@ import { TEAM_MARKETS, betLabel, signed } from "./teamMarkets";
 import { gameDateTime, overtimeLabel } from "../../../utils/nbaGame";
 import { LIMITS, opponentIn, readLimit, readLine, readSide, withBet } from "../../../utils/betParams";
 import useWatchlist from "../../watchlist/useWatchlist";
+import BetValue from "../../props/BetValue";
+import OddsField from "../../props/OddsField";
+import { parseOdds, readOdds } from "../../../utils/odds";
 import WatchPicks from "../../watchlist/WatchPicks";
 import WatchStar from "../../watchlist/WatchStar";
 
@@ -129,6 +132,7 @@ function NBATeamPropChecker() {
     const [side, setSide] = useState<NbaSide>("over");
     const [limit, setLimit] = useState(10);
     const [vsNext, setVsNext] = useState(false);
+    const [odds, setOdds] = useState("");   // bookmaker's decimal odds as typed, optional
 
     // team's next game, its opponent can be used as a filter
     const [nextGame, setNextGame] = useState<NbaGame | null>(null);
@@ -184,14 +188,14 @@ function NBATeamPropChecker() {
     const nextOpponent = nextGame && teamId ? opponentIn(nextGame, teamId) : null;
 
     // checks the bet and puts it in the url (opponent_id = only games vs the next opponent)
-    const check = useCallback(async (bet: { team_id: number, market: NbaTeamMarket, line: number, side: NbaSide, limit: number }, opponent_id?: number) => {
+    const check = useCallback(async (bet: { team_id: number, market: NbaTeamMarket, line: number, side: NbaSide, limit: number, odds: number | null }, opponent_id?: number) => {
         setCalculating(true);
         setErrorMessage("");
         try {
             const res = await getTeamHitRate(bet.team_id, { market: bet.market, line: bet.line, side: bet.side, limit: bet.limit }, opponent_id);
             setResult(res);
             setSearchParams((params) => withBet(params, {
-                bet: "team", team: bet.team_id, market: bet.market, line: bet.line, side: bet.side, last: bet.limit, vs: opponent_id !== undefined,
+                bet: "team", team: bet.team_id, market: bet.market, line: bet.line, side: bet.side, last: bet.limit, vs: opponent_id !== undefined, odds: bet.odds,
             }), { replace: true });
         } catch {
             setResult(null);
@@ -205,7 +209,7 @@ function NBATeamPropChecker() {
         e.preventDefault();
         if (!teamId || (rules.line && line === "")) return;
         await check(
-            { team_id: teamId, market, line: rules.line ? Number(line) : 0, side: rules.side ? side : "over", limit },
+            { team_id: teamId, market, line: rules.line ? Number(line) : 0, side: rules.side ? side : "over", limit, odds: parseOdds(odds) },
             vsNext && nextOpponent ? nextOpponent.id : undefined,
         );
     };
@@ -224,12 +228,14 @@ function NBATeamPropChecker() {
                 line: Number(urlLine),
                 side: urlMarket.side ? readSide(initialParams) : "over" as NbaSide,
                 limit: readLimit(initialParams),
+                odds: parseOdds(initialParams.get("odds")),
             };
             setTeamId(team_id);
             setMarket(bet.market);
             if (urlMarket.line) setLine(urlLine);
             setSide(bet.side);
             setLimit(bet.limit);
+            setOdds(readOdds(initialParams));
             // vs the next opponent: that game is needed first
             let opponent_id: number | undefined;
             if (initialParams.get("vs") === "1") {
@@ -280,7 +286,7 @@ function NBATeamPropChecker() {
                         ))}
                     </select>
                 </label>
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-2 gap-3">
                     {rules.side &&
                         <div className="flex flex-col gap-1">
                             <span className={label}>Side</span>
@@ -313,6 +319,7 @@ function NBATeamPropChecker() {
                             />
                         </label>
                     }
+                    <OddsField value={odds} onChange={setOdds} control={control} label={label} />
                     <label className="flex flex-col gap-1">
                         <span className={label}>Last games</span>
                         <select className={control} value={limit} onChange={(e) => setLimit(Number(e.target.value))}>
@@ -358,8 +365,9 @@ function NBATeamPropChecker() {
                 }
                 {result && team ?
                     <TeamHitRateResult team={team} result={result}>
+                        <BetValue hit_rate={result.hit_rate} games={result.games} odds={parseOdds(odds)} />
                         <TeamHitRateSplits team_id={team.id} result={result} opponent_id={nextOpponent?.id} />
-                        <AddToParlay leg={{ team_id: team.id, market: result.market, line: result.line, side: result.side }} />
+                        <AddToParlay leg={{ team_id: team.id, market: result.market, line: result.line, side: result.side, odds: parseOdds(odds) }} />
                     </TeamHitRateResult> :
                     !errorMessage &&
                     <div className="flex flex-col gap-2 text-zinc-500">

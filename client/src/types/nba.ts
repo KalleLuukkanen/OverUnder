@@ -259,6 +259,7 @@ type ParlayLegBase = {
     parlay_id: number;
     line: number;                  // team bets: the spread for 'spread' (can be negative), 0 for 'win'
     side: NbaSide;                 // 'over' for win and spread
+    odds: number | null;           // the leg's decimal odds when added, if given
     game: {
         id: string;
         game_date: string;

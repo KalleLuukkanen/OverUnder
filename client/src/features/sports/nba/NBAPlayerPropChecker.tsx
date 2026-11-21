@@ -13,6 +13,9 @@ import { STATS } from "./hitRateStats";
 import { gameDateTime } from "../../../utils/nbaGame";
 import { LIMITS, opponentIn, readLimit, readLine, readSide, withBet } from "../../../utils/betParams";
 import useWatchlist from "../../watchlist/useWatchlist";
+import BetValue from "../../props/BetValue";
+import OddsField from "../../props/OddsField";
+import { parseOdds, readOdds } from "../../../utils/odds";
 import WatchPicks from "../../watchlist/WatchPicks";
 import WatchStar from "../../watchlist/WatchStar";
 
@@ -39,6 +42,7 @@ function NBAPlayerPropChecker() {
     const [side, setSide] = useState<NbaSide>("over");
     const [limit, setLimit] = useState(10);
     const [vsNext, setVsNext] = useState(false);
+    const [odds, setOdds] = useState("");   // bookmaker's decimal odds as typed, optional
 
     // player's team's next game, its opponent can be used as a filter
     const [nextGame, setNextGame] = useState<NbaGame | null>(null);
@@ -87,14 +91,14 @@ function NBAPlayerPropChecker() {
     const nextOpponent = nextGame && player?.team_id ? opponentIn(nextGame, player.team_id) : null;
 
     // checks the prop and puts it in the url (opponent_id = only games vs the next opponent)
-    const check = useCallback(async (bet: { player: NbaPlayer, stat: NbaStat, line: number, side: NbaSide, limit: number }, opponent_id?: number) => {
+    const check = useCallback(async (bet: { player: NbaPlayer, stat: NbaStat, line: number, side: NbaSide, limit: number, odds: number | null }, opponent_id?: number) => {
         setCalculating(true);
         setErrorMessage("");
         try {
             const res = await getHitRate(bet.player.id, { stat: bet.stat, line: bet.line, side: bet.side, limit: bet.limit }, opponent_id);
             setResult(res);
             setSearchParams((params) => withBet(params, {
-                player: bet.player.id, stat: bet.stat, line: bet.line, side: bet.side, last: bet.limit, vs: opponent_id !== undefined,
+                player: bet.player.id, stat: bet.stat, line: bet.line, side: bet.side, last: bet.limit, vs: opponent_id !== undefined, odds: bet.odds,
             }), { replace: true });
         } catch {
             setResult(null);
@@ -107,7 +111,7 @@ function NBAPlayerPropChecker() {
     const calculate = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!player || line === "") return;
-        await check({ player, stat, line: Number(line), side, limit }, vsNext && nextOpponent ? nextOpponent.id : undefined);
+        await check({ player, stat, line: Number(line), side, limit, odds: parseOdds(odds) }, vsNext && nextOpponent ? nextOpponent.id : undefined);
     };
 
     // a prop in the url (e.g. back from signing in): fill the form and check it again
@@ -121,12 +125,13 @@ function NBAPlayerPropChecker() {
             try {
                 const restored = await getPlayer(player_id);
                 if (cancelled) return;
-                const bet = { player: restored, stat: urlStat, line: Number(urlLine), side: readSide(initialParams), limit: readLimit(initialParams) };
+                const bet = { player: restored, stat: urlStat, line: Number(urlLine), side: readSide(initialParams), limit: readLimit(initialParams), odds: parseOdds(initialParams.get("odds")) };
                 setPlayer(restored);
                 setStat(bet.stat);
                 setLine(urlLine);
                 setSide(bet.side);
                 setLimit(bet.limit);
+                setOdds(readOdds(initialParams));
                 // vs the next opponent: that game is needed first
                 let opponent_id: number | undefined;
                 if (initialParams.get("vs") === "1" && restored.team_id) {
@@ -187,7 +192,7 @@ function NBAPlayerPropChecker() {
                         ))}
                     </select>
                 </label>
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-2 gap-3">
                     <div className="flex flex-col gap-1">
                         <span className={label}>Side</span>
                         {/* over / under as a two-button toggle */}
@@ -216,6 +221,7 @@ function NBAPlayerPropChecker() {
                             onChange={(e) => setLine(e.target.value)}
                         />
                     </label>
+                    <OddsField value={odds} onChange={setOdds} control={control} label={label} />
                     <label className="flex flex-col gap-1">
                         <span className={label}>Last games</span>
                         <select className={control} value={limit} onChange={(e) => setLimit(Number(e.target.value))}>
@@ -257,8 +263,9 @@ function NBAPlayerPropChecker() {
                 }
                 {result && player ?
                     <HitRateResult result={result}>
+                        <BetValue hit_rate={result.hit_rate} games={result.games} odds={parseOdds(odds)} />
                         <HitRateSplits player_id={player.id} result={result} opponent_id={nextOpponent?.id} />
-                        <AddToParlay leg={{ player_id: player.id, stat: result.stat, line: result.line, side: result.side }} />
+                        <AddToParlay leg={{ player_id: player.id, stat: result.stat, line: result.line, side: result.side, odds: parseOdds(odds) }} />
                     </HitRateResult> :
                     !errorMessage &&
                     <div className="flex flex-col gap-2 text-zinc-500">

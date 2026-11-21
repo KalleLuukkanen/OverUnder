@@ -75,7 +75,7 @@ const getParlays = async (user_id: string) => {
 
     const legs = await sql`
         SELECT
-            l.id, l.parlay_id, l.player_id, p.name AS player_name, l.stat, l.market, l.line::float8 AS line, l.side, l.game_id,
+            l.id, l.parlay_id, l.player_id, p.name AS player_name, l.stat, l.market, l.line::float8 AS line, l.side, l.odds::float8 AS odds, l.game_id,
             g.game_date, g.game_date::text AS game_day, g.season, g.start_time, g.home_score, g.away_score, g.overtime_periods,
             g.home_team_id, nba_team_abbreviation(g.home_team_id, g.season) AS home_team,
             g.away_team_id, nba_team_abbreviation(g.away_team_id, g.season) AS away_team,
@@ -133,6 +133,7 @@ const getParlays = async (user_id: string) => {
             ...subject,
             line: leg.line as number,
             side: leg.side as Side,
+            odds: leg.odds as number | null,
             game: leg.game_id ? {
                 id: leg.game_id as string,
                 game_date: leg.game_date as Date,
@@ -295,31 +296,31 @@ const ruleConflict = async (parlay_id: number, newLeg: Omit<RuleLeg, "home_team_
     return clash ? rule.reason : null;
 };
 
-// adds a player prop to the parlay, tied to the player's next game
+// adds a player prop to the parlay, tied to the player's next game (odds = the leg's decimal odds, optional)
 // returns the new id, or the reason it can't be added
-const addLeg = async (parlay_id: number, player_id: number, stat: string, line: number, side: Side) => {
+const addLeg = async (parlay_id: number, player_id: number, stat: string, line: number, side: Side, odds: number | null) => {
     const game_id = await nextGameOfPlayer(player_id);
     if (!game_id) return { error: "This player has no upcoming game to bet on" };
     const conflict = await ruleConflict(parlay_id, { game_id, player_id, stat, team_id: null, market: null });
     if (conflict) return { error: conflict };
     const result = await sql`
-        INSERT INTO parlay_leg (parlay_id, player_id, game_id, stat, line, side)
-        VALUES (${parlay_id}, ${player_id}, ${game_id}, ${stat}, ${line}, ${side})
+        INSERT INTO parlay_leg (parlay_id, player_id, game_id, stat, line, side, odds)
+        VALUES (${parlay_id}, ${player_id}, ${game_id}, ${stat}, ${line}, ${side}, ${odds})
         RETURNING id;
     `;
     return { id: result[0].id as number };
 };
 
-// adds a team bet to the parlay, tied to the team's next game
+// adds a team bet to the parlay, tied to the team's next game (odds = the leg's decimal odds, optional)
 // returns the new id, or the reason it can't be added
-const addTeamLeg = async (parlay_id: number, team_id: number, market: Market, line: number, side: Side) => {
+const addTeamLeg = async (parlay_id: number, team_id: number, market: Market, line: number, side: Side, odds: number | null) => {
     const game_id = await nextGameOfTeam(team_id);
     if (!game_id) return { error: "This team has no upcoming game to bet on" };
     const conflict = await ruleConflict(parlay_id, { game_id, player_id: null, stat: null, team_id, market });
     if (conflict) return { error: conflict };
     const result = await sql`
-        INSERT INTO parlay_leg (parlay_id, team_id, game_id, market, line, side)
-        VALUES (${parlay_id}, ${team_id}, ${game_id}, ${market}, ${line}, ${side})
+        INSERT INTO parlay_leg (parlay_id, team_id, game_id, market, line, side, odds)
+        VALUES (${parlay_id}, ${team_id}, ${game_id}, ${market}, ${line}, ${side}, ${odds})
         RETURNING id;
     `;
     return { id: result[0].id as number };

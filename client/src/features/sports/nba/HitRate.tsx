@@ -9,6 +9,9 @@ import HitRateResult from "./HitRateResult";
 import HitRateSplits from "./HitRateSplits";
 import AddToParlay from "../../parlays/AddToParlay";
 import useWatchlist from "../../watchlist/useWatchlist";
+import BetValue from "../../props/BetValue";
+import OddsField from "../../props/OddsField";
+import { parseOdds, readOdds } from "../../../utils/odds";
 import WatchPicks from "../../watchlist/WatchPicks";
 import WatchStar from "../../watchlist/WatchStar";
 
@@ -43,6 +46,7 @@ function HitRate({ team1_id, team2_id }: { team1_id: number, team2_id?: number }
     const [side, setSide] = useState<NbaSide>(() => readSide(initialParams));
     const [limit, setLimit] = useState(() => readLimit(initialParams));
     const [vsOpponent, setVsOpponent] = useState(() => initialParams.get("vs") === "1");
+    const [odds, setOdds] = useState(() => readOdds(initialParams));   // bookmaker's decimal odds as typed, optional
 
     const [calculating, setCalculating] = useState(false);
     const [result, setResult] = useState<NbaHitRate | null>(null);
@@ -99,7 +103,7 @@ function HitRate({ team1_id, team2_id }: { team1_id: number, team2_id?: number }
 
     // checks the prop and puts it in the url (opponent_id = only games vs the other team)
     const check = useCallback(async (
-        bet: { team_id: number, player_id: number, stat: NbaStat, line: number, side: NbaSide, limit: number },
+        bet: { team_id: number, player_id: number, stat: NbaStat, line: number, side: NbaSide, limit: number, odds: number | null },
         opponent_id?: number,
     ) => {
         setCalculating(true);
@@ -109,7 +113,7 @@ function HitRate({ team1_id, team2_id }: { team1_id: number, team2_id?: number }
             setResult(res);
             setResultPlayer(bet.player_id);
             setSearchParams((params) => withBet(params, {
-                team: bet.team_id, player: bet.player_id, stat: bet.stat, line: bet.line, side: bet.side, last: bet.limit, vs: opponent_id !== undefined,
+                team: bet.team_id, player: bet.player_id, stat: bet.stat, line: bet.line, side: bet.side, last: bet.limit, vs: opponent_id !== undefined, odds: bet.odds,
             }), { replace: true });
         } catch {
             setResult(null);
@@ -123,7 +127,7 @@ function HitRate({ team1_id, team2_id }: { team1_id: number, team2_id?: number }
         e.preventDefault();
         if (!playerSelected || line === "") return;
         await check(
-            { team_id: rosterSelected, player_id: playerSelected, stat, line: Number(line), side, limit },
+            { team_id: rosterSelected, player_id: playerSelected, stat, line: Number(line), side, limit, odds: parseOdds(odds) },
             vsOpponent && opponent ? opponent.id : undefined,
         );
     };
@@ -137,7 +141,7 @@ function HitRate({ team1_id, team2_id }: { team1_id: number, team2_id?: number }
         if (loading || !player_id || !urlStat || urlLine === null) return;
         const other = initialTeam === team1_id ? team2_id : team1_id;
         check(
-            { team_id: initialTeam, player_id, stat: urlStat, line: Number(urlLine), side: readSide(initialParams), limit: readLimit(initialParams) },
+            { team_id: initialTeam, player_id, stat: urlStat, line: Number(urlLine), side: readSide(initialParams), limit: readLimit(initialParams), odds: parseOdds(initialParams.get("odds")) },
             initialParams.get("vs") === "1" && other ? other : undefined,
         );
     }, [loading, initialParams, initialTeam, team1_id, team2_id, check]);
@@ -205,7 +209,7 @@ function HitRate({ team1_id, team2_id }: { team1_id: number, team2_id?: number }
                             ))}
                         </select>
                     </label>
-                    <div className="grid grid-cols-3 gap-3">
+                    <div className="grid grid-cols-2 gap-3">
                         <div className="flex flex-col gap-1">
                             <span className={label}>Side</span>
                             {/* over / under as a two-button toggle */}
@@ -234,6 +238,7 @@ function HitRate({ team1_id, team2_id }: { team1_id: number, team2_id?: number }
                                 onChange={(e) => setLine(e.target.value)}
                             />
                         </label>
+                        <OddsField value={odds} onChange={setOdds} control={control} label={label} />
                         <label className="flex flex-col gap-1">
                             <span className={label}>Last games</span>
                             <select
@@ -274,8 +279,9 @@ function HitRate({ team1_id, team2_id }: { team1_id: number, team2_id?: number }
                     }
                     {result && resultPlayer !== null &&
                         <HitRateResult result={result}>
+                            <BetValue hit_rate={result.hit_rate} games={result.games} odds={parseOdds(odds)} />
                             <HitRateSplits player_id={resultPlayer} result={result} opponent_id={opponent?.id} />
-                            <AddToParlay leg={{ player_id: resultPlayer, stat: result.stat, line: result.line, side: result.side }} />
+                            <AddToParlay leg={{ player_id: resultPlayer, stat: result.stat, line: result.line, side: result.side, odds: parseOdds(odds) }} />
                         </HitRateResult>
                     }
                 </div>

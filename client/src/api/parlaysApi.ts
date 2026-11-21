@@ -2,9 +2,10 @@ import { get, post, patch, del } from "./apiClient";
 import type { NbaSide, NbaStat, NbaTeamMarket, Parlay } from "../types/nba";
 
 // a new leg: a player prop or a team bet (win and spread need no side, win no line)
+// odds = the leg's decimal odds if the user gave them
 export type NewLeg =
-    | { player_id: number, stat: NbaStat, line: number, side: NbaSide }
-    | { team_id: number, market: NbaTeamMarket, line: number, side: NbaSide };
+    | { player_id: number, stat: NbaStat, line: number, side: NbaSide, odds?: number | null }
+    | { team_id: number, market: NbaTeamMarket, line: number, side: NbaSide, odds?: number | null };
 
 // member's parlays with legs, results and hit rates, newest first (401 if not signed in)
 const getParlays = () =>

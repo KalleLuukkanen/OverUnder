@@ -62,6 +62,7 @@ function LegRow({ leg, onRemove }: { leg: ParlayLeg, onRemove: () => void }) {
                         {name}
                     </Link>
                     <span className="ml-2 text-zinc-300">{legBet(leg)}</span>
+                    {leg.odds !== null && <span className="ml-2 text-zinc-400 tabular-nums" title="Odds when added">@ {leg.odds.toFixed(2)}</span>}
                     {outcome && <span className="ml-2 text-zinc-500">· {outcome}</span>}
                 </span>
                 <span className="text-sm text-zinc-500">
@@ -106,10 +107,14 @@ function ParlayCard({ parlay, onChange }: { parlay: Parlay, onChange: () => void
     const liveChance = estimateParlay(parlay.legs, true);
     const implied = parlay.odds ? 1 / parlay.odds : null;
     const open = parlay.status === "pending" || parlay.status === "empty";
+    // every leg has its own odds: their product is the parlay's odds (before any boost)
+    const legsOdds = parlay.legs.length > 0 && parlay.legs.every((l) => l.odds !== null)
+        ? Math.round(parlay.legs.reduce((product, l) => product * (l.odds as number), 1) * 100) / 100
+        : null;
 
-    // odds are saved when the field loses focus, empty removes them
-    const saveOdds = async () => {
-        const value = odds.trim() === "" ? null : Number(odds.replace(",", "."));
+    // odds are saved when the field loses focus (or text is given), empty removes them
+    const saveOdds = async (text = odds) => {
+        const value = text.trim() === "" ? null : Number(text.replace(",", "."));
         if (value === parlay.odds) return;
         if (value !== null && (!Number.isFinite(value) || value < 1.01)) {
             setOddsError("Decimal odds, e.g. 6.50");
@@ -204,9 +209,19 @@ function ParlayCard({ parlay, onChange }: { parlay: Parlay, onChange: () => void
                             placeholder="e.g. 6.50"
                             value={odds}
                             onChange={(e) => setOdds(e.target.value)}
-                            onBlur={saveOdds}
+                            onBlur={() => saveOdds()}
                             onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur(); }}
                         />
+                        {legsOdds !== null && legsOdds !== parlay.odds &&
+                            <button
+                                className="w-fit text-xs text-sky-400 hover:underline cursor-pointer"
+                                type="button"
+                                title="The legs' odds multiplied together"
+                                onClick={() => { setOdds(String(legsOdds)); saveOdds(String(legsOdds)); }}
+                            >
+                                Use legs' {legsOdds.toFixed(2)}
+                            </button>
+                        }
                     </label>
                     {implied !== null &&
                         <div className="flex flex-col">

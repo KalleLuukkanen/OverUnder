@@ -100,7 +100,7 @@ const deleteParlay = async (req: Request, res: Response) => {
     return res.status(204).end();
 };
 
-// add a player prop { player_id, stat, line, side } or a team bet { team_id, market, line?, side? },
+// add a player prop { player_id, stat, line, side, odds? } or a team bet { team_id, market, line?, side?, odds? },
 // tied to the player's / team's next game. Legs that clash with one already in the parlay are refused
 const addLeg = async (req: Request, res: Response) => {
     const parlay_id = await ownedParlayId(req, res);
@@ -135,13 +135,17 @@ const addLeg = async (req: Request, res: Response) => {
     if (side !== "over" && side !== "under") {
         return res.status(400).json({ error: "Invalid side, expected 'over' or 'under'" });
     }
+    const odds = readOdds(body.odds ?? null);
+    if (odds === undefined) {
+        return res.status(400).json({ error: "Invalid odds, expected decimal odds like 1.85" });
+    }
     if (await parlayRepository.countLegs(parlay_id) >= MAX_LEGS) {
         return res.status(400).json({ error: `A parlay can have at most ${MAX_LEGS} legs` });
     }
 
     const result = isTeam ?
-        await parlayRepository.addTeamLeg(parlay_id, body.team_id, body.market, line, side) :
-        await parlayRepository.addLeg(parlay_id, body.player_id, body.stat, line, side);
+        await parlayRepository.addTeamLeg(parlay_id, body.team_id, body.market, line, side, odds) :
+        await parlayRepository.addLeg(parlay_id, body.player_id, body.stat, line, side, odds);
     if ("error" in result) {
         return res.status(400).json({ error: result.error });
     }
