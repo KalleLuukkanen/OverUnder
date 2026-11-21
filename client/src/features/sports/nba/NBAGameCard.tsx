@@ -1,5 +1,6 @@
 import type { NbaGame } from "../../../types/nba";
 import { Link } from "react-router-dom";
+import { Star } from "lucide-react";
 import { isScoreMissing, gameDateTime, finalLabel } from "../../../utils/nbaGame";
 
 // one team's row: abbreviation and score, the loser is dimmed
@@ -16,7 +17,8 @@ function TeamRow({ team, score, won, prefix = "" }: { team: string, score: numbe
 
 // team_id is optional: when given, the card also shows that team's W/L
 // bg is the card's background class, darker by default, lighter inside a panel
-function NBAGameCard({ game, team_id, bg = "bg-zinc-900" }: { game: NbaGame, team_id?: number, bg?: string }) {
+// watched marks a game of a team or player on the member's watchlist
+function NBAGameCard({ game, team_id, bg = "bg-zinc-900", watched = false }: { game: NbaGame, team_id?: number, bg?: string, watched?: boolean }) {
 
     const scoreMissing = isScoreMissing(game);
     const hasScore = game.home_score !== null && game.away_score !== null;
@@ -37,11 +39,14 @@ function NBAGameCard({ game, team_id, bg = "bg-zinc-900" }: { game: NbaGame, tea
 
     return (
         <Link
-            className={`group flex flex-col gap-2 w-60 p-3 rounded-lg border border-zinc-800 ${bg} hover:border-zinc-600 transition-colors`}
+            className={`group flex flex-col gap-2 w-60 p-3 rounded-lg border ${watched ? "border-amber-400/50" : "border-zinc-800"} ${bg} hover:border-zinc-600 transition-colors`}
             to={`/nba/game/${game.id}`}
         >
             <div className="flex items-center justify-between text-xs text-zinc-400">
-                <span>{gameDateTime(game)}</span>
+                <span className="flex items-center gap-1">
+                    {watched && <Star size={12} className="text-amber-300" fill="currentColor" aria-label="On your watchlist" />}
+                    {gameDateTime(game)}
+                </span>
                 {result &&
                     <span className={`px-1.5 py-0.5 rounded font-bold ${result === "W" ? "bg-emerald-500/15 text-emerald-400" : "bg-rose-500/15 text-rose-400"}`}>
                         {result}

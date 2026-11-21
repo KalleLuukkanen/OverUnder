@@ -35,6 +35,10 @@ const post = <T>(path: string, body: object = {}) =>
 const patch = <T>(path: string, body: object = {}) =>
     request<T>(path, { method: "PATCH", body: JSON.stringify(body) });
 
+// PUT request, adds or replaces a resource at the path
+const put = <T>(path: string, body: object = {}) =>
+    request<T>(path, { method: "PUT", body: JSON.stringify(body) });
+
 // DELETE request
 const del = <T>(path: string) =>
     request<T>(path, { method: "DELETE" });
@@ -44,5 +48,6 @@ export {
     get,
     post,
     patch,
+    put,
     del,
 };

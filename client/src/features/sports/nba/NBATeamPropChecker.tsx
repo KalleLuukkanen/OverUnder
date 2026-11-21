@@ -8,6 +8,9 @@ import AddToParlay from "../../parlays/AddToParlay";
 import { TEAM_MARKETS, betLabel, signed } from "./teamMarkets";
 import { gameDateTime, overtimeLabel } from "../../../utils/nbaGame";
 import { LIMITS, opponentIn, readLimit, readLine, readSide, withBet } from "../../../utils/betParams";
+import useWatchlist from "../../watchlist/useWatchlist";
+import WatchPicks from "../../watchlist/WatchPicks";
+import WatchStar from "../../watchlist/WatchStar";
 
 // shared look of the form controls
 const control = "bg-zinc-800 border border-zinc-700 rounded-md px-2 py-1.5 text-zinc-100 focus:outline-none focus:border-sky-500";
@@ -108,7 +111,10 @@ function TeamHitRateResult({ team, result, children }: { team: NbaTeam, result: 
 // team and game bets: pick a team, a bet (win, spread, totals, team stats) and a line, see how often it hit
 // game totals are checked from the chosen team's games
 // the checked bet goes to the url (?bet=team&team=...) and is checked again from it when the page opens
+// members can pick a team from their watchlist and star the picked one
 function NBATeamPropChecker() {
+
+    const watch = useWatchlist();
 
     const [searchParams, setSearchParams] = useSearchParams();
     // the url as the page opened, read once
@@ -245,15 +251,27 @@ function NBATeamPropChecker() {
     return (
         <form className="grid grid-cols-1 md:grid-cols-2 gap-6" onSubmit={calculate}>
             <div className="flex flex-col gap-3">
-                <label className="flex flex-col gap-1">
-                    <span className={label}>Team</span>
-                    <select className={control} value={teamId ?? ""} onChange={(e) => chooseTeam(e.target.value ? Number(e.target.value) : null)}>
-                        <option value="">Choose a team...</option>
-                        {teams.map((t) => (
-                            <option key={t.id} value={t.id}>{t.name}</option>
-                        ))}
-                    </select>
-                </label>
+                <div className="flex flex-col gap-1">
+                    <div className="flex items-center justify-between gap-2">
+                        <span className={label} id="team-label">Team</span>
+                        <WatchPicks
+                            items={watch.watchlist?.teams ?? []}
+                            selectedId={teamId}
+                            onPick={(id) => { if (id !== teamId) chooseTeam(id); }}
+                            label="Pick a team from your watchlist"
+                        />
+                    </div>
+                    <div className="flex items-center gap-1">
+                        <select className={`${control} flex-1 min-w-0`} aria-labelledby="team-label" value={teamId ?? ""} onChange={(e) => chooseTeam(e.target.value ? Number(e.target.value) : null)}>
+                            <option value="">Choose a team...</option>
+                            {teams.map((t) => (
+                                <option key={t.id} value={t.id}>{t.name}</option>
+                            ))}
+                        </select>
+                        {team && <WatchStar list={watch} kind="team" id={team.id} name={team.name} />}
+                    </div>
+                    {watch.error && <span className="text-xs text-rose-400">{watch.error}</span>}
+                </div>
                 <label className="flex flex-col gap-1">
                     <span className={label}>Bet</span>
                     <select className={control} value={market} onChange={(e) => setMarket(e.target.value as NbaTeamMarket)}>

@@ -8,11 +8,17 @@ import { STATS } from "./hitRateStats";
 import HitRateResult from "./HitRateResult";
 import HitRateSplits from "./HitRateSplits";
 import AddToParlay from "../../parlays/AddToParlay";
+import useWatchlist from "../../watchlist/useWatchlist";
+import WatchPicks from "../../watchlist/WatchPicks";
+import WatchStar from "../../watchlist/WatchStar";
 
 // prop checker of a game page: pick either team's player, a stat and a line
 // the checked prop goes to the url (?team=...&player=...&stat=...) and is checked again when the page opens,
 // so signing in to save it to a parlay comes back to the same result
+// members can pick their watched players of these two teams, and star the picked one
 function HitRate({ team1_id, team2_id }: { team1_id: number, team2_id?: number }) {
+
+    const watch = useWatchlist();
 
     const [searchParams, setSearchParams] = useSearchParams();
     // the url as the page opened, read once; its team must be one of the game's
@@ -79,6 +85,15 @@ function HitRate({ team1_id, team2_id }: { team1_id: number, team2_id?: number }
         setResult(null);
     };
 
+    // a watchlist pick: switch to the player's team and pick them
+    const pickWatched = (player_id: number) => {
+        const watched = watch.watchlist?.players.find((p) => p.id === player_id);
+        if (!watched?.team_id) return;
+        setRosterSelected(watched.team_id);
+        setPlayerSelected(player_id);
+        setResult(null);
+    };
+
     // opponent is the team that isn't selected, undefined if there's only one team
     const opponent = rosterSelected === team1_id ? team2 : team1;
 
@@ -131,6 +146,9 @@ function HitRate({ team1_id, team2_id }: { team1_id: number, team2_id?: number }
 
     const roster = rosterSelected === team1_id ? team1Roster : team2Roster;
     const canCalculate = playerSelected !== null && line !== "" && !calculating;
+    const pickedPlayer = roster.find((p) => p.id === playerSelected);
+    // watched players who play in this game (their current team is one of the two)
+    const watchedHere = (watch.watchlist?.players ?? []).filter((p) => p.team_id !== null && (p.team_id === team1_id || p.team_id === team2_id));
 
     // shared look of the form controls
     const control = "bg-zinc-800 border border-zinc-700 rounded-md px-2 py-1.5 text-zinc-100 focus:outline-none focus:border-sky-500";
@@ -153,20 +171,28 @@ function HitRate({ team1_id, team2_id }: { team1_id: number, team2_id?: number }
                                 {team2_id && <option value={team2_id}>{team2?.name}</option>}
                             </select>
                         </label>
-                        <label className="flex flex-col gap-1">
-                            <span className={label}>Player</span>
-                            <select
-                                className={control}
-                                value={playerSelected ?? ""}
-                                onChange={(e) => setPlayerSelected(e.target.value ? Number(e.target.value) : null)}
-                            >
-                                <option value="">-- choose player --</option>
-                                {roster.map((p) => (
-                                    <option key={p.id} value={p.id}>{p.name}</option>
-                                ))}
-                            </select>
-                        </label>
+                        <div className="flex flex-col gap-1">
+                            <div className="flex items-center justify-between gap-2">
+                                <span className={label} id="player-label">Player</span>
+                                <WatchPicks items={watchedHere} selectedId={playerSelected} onPick={pickWatched} label="Pick a player from your watchlist" />
+                            </div>
+                            <div className="flex items-center gap-1">
+                                <select
+                                    className={`${control} flex-1 min-w-0`}
+                                    aria-labelledby="player-label"
+                                    value={playerSelected ?? ""}
+                                    onChange={(e) => setPlayerSelected(e.target.value ? Number(e.target.value) : null)}
+                                >
+                                    <option value="">-- choose player --</option>
+                                    {roster.map((p) => (
+                                        <option key={p.id} value={p.id}>{p.name}</option>
+                                    ))}
+                                </select>
+                                {pickedPlayer && <WatchStar list={watch} kind="player" id={pickedPlayer.id} name={pickedPlayer.name} />}
+                            </div>
+                        </div>
                     </div>
+                    {watch.error && <span className="text-xs text-rose-400">{watch.error}</span>}
                     <label className="flex flex-col gap-1">
                         <span className={label}>Stat</span>
                         <select

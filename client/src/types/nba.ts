@@ -405,3 +405,33 @@ export type NbaPlayerSeasonRanks = {
     ranks: Record<NbaLeaderStat, NbaStatRank>;
     qualified_players: number;     // how many players are ranked
 };
+
+// a watched player's / team's next game, from that team's side
+export type NbaWatchGame = {
+    id: string;
+    game_date: string;          // 'yyyy-mm-dd', US date
+    start_time: string | null;
+    is_home: boolean;
+    opponent_id: number;
+    opponent: string;
+};
+
+export type NbaWatchedPlayer = {
+    id: number;
+    name: string;
+    team_id: number | null;
+    team: string | null;
+    next_game: NbaWatchGame | null;   // null when no game is scheduled (e.g. free agent)
+};
+
+export type NbaWatchedTeam = {
+    id: number;
+    name: string;
+    abbreviation: string;
+    next_game: NbaWatchGame | null;
+};
+
+export type NbaWatchlist = {
+    players: NbaWatchedPlayer[];
+    teams: NbaWatchedTeam[];
+};

@@ -9,6 +9,7 @@ import { ApiError } from "../api/apiClient";
 import NBAGameCard from "../features/sports/nba/NBAGameCard";
 import table from "../styles/table";
 import { recordLabel, overtimeLabel } from "../utils/nbaGame";
+import WatchButton from "../features/watchlist/WatchButton";
 
 const PAST_SHOWN = 10;
 const UPCOMING_SHOWN = 5;
@@ -186,6 +187,9 @@ function NBATeam() {
                 <div className="flex flex-col">
                     <h1 className="text-3xl font-bold">{team.name}</h1>
                     <span className="text-zinc-400">{[team.abbreviation, record && `${record} this season`].filter(Boolean).join(" · ")}</span>
+                </div>
+                <div className="ml-auto">
+                    <WatchButton kind="team" id={team.id} />
                 </div>
             </div>
             <div className="flex flex-col xl:flex-row gap-4">

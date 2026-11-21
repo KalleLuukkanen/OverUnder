@@ -12,6 +12,9 @@ import AddToParlay from "../../parlays/AddToParlay";
 import { STATS } from "./hitRateStats";
 import { gameDateTime } from "../../../utils/nbaGame";
 import { LIMITS, opponentIn, readLimit, readLine, readSide, withBet } from "../../../utils/betParams";
+import useWatchlist from "../../watchlist/useWatchlist";
+import WatchPicks from "../../watchlist/WatchPicks";
+import WatchStar from "../../watchlist/WatchStar";
 
 // shared look of the form controls
 const control = "bg-zinc-800 border border-zinc-700 rounded-md px-2 py-1.5 text-zinc-100 focus:outline-none focus:border-sky-500";
@@ -19,7 +22,10 @@ const label = "text-xs font-medium uppercase tracking-wide text-zinc-400";
 
 // quick prop check for any player: pick player, stat, line and side, see how often it hit
 // the checked prop goes to the url and is checked again from it when the page opens
+// members can pick a player from their watchlist and star the picked one
 function NBAPlayerPropChecker() {
+
+    const watch = useWatchlist();
 
     const [searchParams, setSearchParams] = useSearchParams();
     // the url as the page opened, read once
@@ -65,6 +71,16 @@ function NBAPlayerPropChecker() {
         setResult(null);
         setErrorMessage("");
         setSearchParams((params) => withBet(params, null), { replace: true });
+    };
+
+    // a watchlist pick: the player's details are needed, like from the search
+    const pickWatched = async (player_id: number) => {
+        if (player_id === player?.id) return;
+        try {
+            choosePlayer(await getPlayer(player_id));
+        } catch {
+            setErrorMessage("Couldn't load the player, please try again");
+        }
     };
 
     // next opponent is the team in the next game that isn't the player's
@@ -137,24 +153,31 @@ function NBAPlayerPropChecker() {
         <form className="grid grid-cols-1 md:grid-cols-2 gap-6" onSubmit={calculate}>
             <div className="flex flex-col gap-3">
                 <div className="flex flex-col gap-1">
-                    <span className={label}>Player</span>
+                    <div className="flex items-center justify-between gap-2">
+                        <span className={label}>Player</span>
+                        <WatchPicks items={watch.watchlist?.players ?? []} selectedId={player?.id ?? null} onPick={pickWatched} label="Pick a player from your watchlist" />
+                    </div>
                     {player ?
                         <div className="flex items-center justify-between gap-2 bg-zinc-800 border border-zinc-700 rounded-md px-3 py-1.5">
                             <Link className="font-medium hover:text-sky-400 hover:underline" to={`/nba/player/${player.id}`}>
                                 {player.name}
                                 {player.team && <span className="ml-2 text-sm font-normal text-zinc-400">{player.team}</span>}
                             </Link>
-                            <button
-                                className="p-0.5 rounded cursor-pointer text-zinc-400 hover:text-white hover:bg-zinc-700"
-                                type="button"
-                                aria-label="Change player"
-                                onClick={() => choosePlayer(null)}
-                            >
-                                <X size={16} />
-                            </button>
+                            <div className="flex items-center gap-1">
+                                <WatchStar list={watch} kind="player" id={player.id} name={player.name} />
+                                <button
+                                    className="p-1 rounded cursor-pointer text-zinc-400 hover:text-white hover:bg-zinc-700"
+                                    type="button"
+                                    aria-label="Change player"
+                                    onClick={() => choosePlayer(null)}
+                                >
+                                    <X size={16} />
+                                </button>
+                            </div>
                         </div> :
                         <PlayerSearch onSelect={choosePlayer} placeholder="Search any NBA player..." className="w-full" activeOnly />
                     }
+                    {watch.error && <span className="text-xs text-rose-400">{watch.error}</span>}
                 </div>
                 <label className="flex flex-col gap-1">
                     <span className={label}>Stat</span>

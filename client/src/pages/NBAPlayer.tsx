@@ -10,6 +10,7 @@ import PlayerCareer from "../features/sports/nba/PlayerCareer";
 import PlayerCareerHighs from "../features/sports/nba/PlayerCareerHighs";
 import PlayerSeasonCard from "../features/sports/nba/PlayerSeasonCard";
 import PlayerInfo from "../features/sports/nba/PlayerInfo";
+import WatchButton from "../features/watchlist/WatchButton";
 
 function NBAPlayer() {
 
@@ -63,6 +64,9 @@ function NBAPlayer() {
                             }
                             {[player.position, player.jersey && `#${player.jersey}`].filter(Boolean).map((part) => ` · ${part}`).join("")}
                         </span>
+                    </div>
+                    <div className="ml-auto">
+                        <WatchButton kind="player" id={player.id} />
                     </div>
                 </div>
                 <div className="flex flex-col-reverse xl:flex-row gap-4">

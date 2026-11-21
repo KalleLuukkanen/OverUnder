@@ -3,6 +3,8 @@ import { getUpcomingGames } from "../../../api/nba/nbaGamesApi";
 import type { NbaGame } from "../../../types/nba";
 import NBAGameCard from "./NBAGameCard";
 import { usDayKey } from "../../../utils/nbaGame";
+import useWatchlist from "../../watchlist/useWatchlist";
+import WatchlistStrip from "../../watchlist/WatchlistStrip";
 
 type GameDay = { date: string, games: NbaGame[] };
 
@@ -29,7 +31,11 @@ const dayLabel = (date: string) => {
     return new Date(y, m - 1, d).toLocaleDateString("fi-FI");
 };
 
+// today's and tomorrow's games; members also see their watchlist, and games with a watched team or player are marked
 function NBAInfo() {
+
+    // the watchlist is extra: if it fails, the games are still shown
+    const { watchlist } = useWatchlist();
 
     const [loading, setLoading] = useState<boolean>(true);
 
@@ -54,20 +60,23 @@ function NBAInfo() {
     }, []);
 
 
+    // teams whose games are marked: watched teams and watched players' teams
+    const watchedTeams = new Set<number>([
+        ...(watchlist?.teams.map((t) => t.id) ?? []),
+        ...(watchlist?.players.flatMap((p) => p.team_id === null ? [] : [p.team_id]) ?? []),
+    ]);
+
+
     if (loading) {
         return (
             <p className="text-zinc-400">Loading games...</p>
         )
     }
 
-    if (upcomingGames.length === 0) {
-        return (
-            <p className="text-zinc-500">Upcoming games not found...</p>
-        )
-    }
-
     return (
         <div className="flex flex-col gap-5">
+            {watchlist && <WatchlistStrip watchlist={watchlist} />}
+            {upcomingGames.length === 0 && <p className="text-zinc-500">Upcoming games not found...</p>}
             {groupByDay(upcomingGames).map((day) => (
                 <div key={day.date} className="flex flex-col gap-2">
                     <span className="font-semibold text-zinc-300">
@@ -77,7 +86,7 @@ function NBAInfo() {
                     <ul className="flex flex-wrap gap-3">
                         {day.games.map((g) => (
                             <li key={g.id}>
-                                <NBAGameCard game={g} />
+                                <NBAGameCard game={g} watched={watchedTeams.has(g.home_team_id) || watchedTeams.has(g.away_team_id)} />
                             </li>
                         ))}
                     </ul>

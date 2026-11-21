@@ -11,6 +11,7 @@ import * as nbaPlayerGamesController from "./controllers/nba/nbaPlayerGamesContr
 import * as nbaSeasonController from "./controllers/nba/nbaSeasonController.js";
 import * as nbaTeamPropsController from "./controllers/nba/nbaTeamPropsController.js";
 import * as parlayController from "./controllers/parlayController.js";
+import * as watchlistController from "./controllers/watchlistController.js";
 
 const app = express();
 
@@ -107,6 +108,14 @@ app.patch("/api/parlays/:parlayId", wrap(parlayController.updateParlay));
 app.delete("/api/parlays/:parlayId", wrap(parlayController.deleteParlay));
 app.post("/api/parlays/:parlayId/legs", wrap(parlayController.addLeg));
 app.delete("/api/parlays/:parlayId/legs/:legId", wrap(parlayController.deleteLeg));
+
+// watchlist: member feature, the user's followed players and teams
+app.use("/api/watchlist", watchlistController.requireUser);
+app.get("/api/watchlist", wrap(watchlistController.getWatchlist));
+app.put("/api/watchlist/players/:playerId", wrap(watchlistController.addPlayer));
+app.delete("/api/watchlist/players/:playerId", wrap(watchlistController.removePlayer));
+app.put("/api/watchlist/teams/:teamId", wrap(watchlistController.addTeam));
+app.delete("/api/watchlist/teams/:teamId", wrap(watchlistController.removeTeam));
 
 // errors of every route end up here (async ones through wrap): logged, and the client gets a 500
 // instead of the server crashing. The four arguments mark it as Express's error handler
