@@ -158,6 +158,7 @@ export type NbaHitRate = {
     hits: number;
     hit_rate: number | null;   // percent, e.g. 80 or 42.9, null if no games
     average: number | null;
+    older_hidden: boolean;         // signed out: older games than the open seasons were left out
     results: {
         game_id: string;
         game_date: string;
@@ -401,6 +402,7 @@ export type NbaTeamHitRate = {
     hits: number;
     hit_rate: number | null;       // percent, null if no games
     average: number | null;        // average value, for win and spread the average margin
+    older_hidden: boolean;         // signed out: older games than the open seasons were left out
     results: {
         game_id: string;
         game_date: string;

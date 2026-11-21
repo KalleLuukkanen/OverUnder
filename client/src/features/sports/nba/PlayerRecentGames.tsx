@@ -4,6 +4,8 @@ import { Link } from "react-router-dom";
 import type { NbaBoxScore } from "../../../types/nba";
 import table from "../../../styles/table";
 import { overtimeLabel } from "../../../utils/nbaGame";
+import { authClient } from "../../../utils/auth";
+import SignInPrompt from "../../../components/SignInPrompt";
 
 // "made-attempted" shooting format, e.g. 8-15
 const shooting = (made: number, attempted: number) => `${made}-${attempted}`;
@@ -11,6 +13,7 @@ const shooting = (made: number, attempted: number) => `${made}-${attempted}`;
 // player's latest stat lines, the game cell links to the game's page
 function PlayerRecentGames({ player_id, limit = 5 }: { player_id: number, limit?: number }) {
 
+    const { data: session, isPending } = authClient.useSession();
     const [games, setGames] = useState<NbaBoxScore[]>([]);
     const [loading, setLoading] = useState(true);
 
@@ -29,9 +32,14 @@ function PlayerRecentGames({ player_id, limit = 5 }: { player_id: number, limit?
         };
         load();
         return () => { cancelled = true };
-    }, [player_id, limit]);
+    // loaded again on signing in or out: signed out only gets the open seasons' games
+    }, [player_id, limit, session?.user.id]);
 
-    if (loading) return <p className="text-zinc-400">Loading latest games...</p>
+    if (loading || isPending) return <p className="text-zinc-400">Loading latest games...</p>
+    // signed out, nothing in the open seasons: e.g. a retired player, the older games need an account
+    if (games.length === 0 && !session) {
+        return <SignInPrompt title="Older games are for members" text="This player has no games in the open seasons. Sign up free to see games from past seasons." />;
+    }
     if (games.length === 0) return <p className="text-zinc-500">No recent games</p>
 
     return (

@@ -54,22 +54,25 @@ const getPlayersGames = async (player_id: number, season: string) => {
     return result;
 };
 
-// get player's last n games (all seasons in db), latest first
-const getPlayersLastGames = async (player_id: number, limit: number) => {
+// only games from fromSeason on, nothing if undefined
+const fromSeasonOn = (fromSeason?: string) => fromSeason ? sql`AND g.season >= ${fromSeason}` : sql``;
+
+// get player's last n games (all seasons in db, or from fromSeason on), latest first
+const getPlayersLastGames = async (player_id: number, limit: number, fromSeason?: string) => {
     const result = await sql`
         ${boxScores()}
-        WHERE pg.player_id = ${player_id}
+        WHERE pg.player_id = ${player_id} ${fromSeasonOn(fromSeason)}
         ORDER BY g.game_date DESC
         LIMIT ${limit};
     `;
     return result;
 };
 
-// get player's last n games against given team, latest first
-const getPlayersLastGamesVsOpponent = async (player_id: number, opponent_id: number, limit: number) => {
+// get player's last n games against given team (from fromSeason on if given), latest first
+const getPlayersLastGamesVsOpponent = async (player_id: number, opponent_id: number, limit: number, fromSeason?: string) => {
     const result = await sql`
         ${boxScores()}
-        WHERE pg.player_id = ${player_id} AND pg.opponent_id = ${opponent_id}
+        WHERE pg.player_id = ${player_id} AND pg.opponent_id = ${opponent_id} ${fromSeasonOn(fromSeason)}
         ORDER BY g.game_date DESC
         LIMIT ${limit};
     `;
@@ -116,6 +119,7 @@ const getPlayersSeasonAverages = async (player_id: number, season: string) => {
 // hit rate of a prop over player's last n games, optionally only against given team
 // e.g. stat 'fgm', line 5.5, side 'over' -> how many of the last 10 games had 6+ field goals made
 // a value exactly on the line (push) counts as a miss
+// fromSeason = only games from that season on (signed out); older_hidden tells there were older games left out
 const getHitRate = async (
     player_id: number,
     stat: string,
@@ -123,6 +127,7 @@ const getHitRate = async (
     side: "over" | "under",
     limit: number,
     opponent_id?: number,
+    fromSeason?: string,
 ) => {
     const value = sql.unsafe(STATS[stat]);
     const result = await sql`
@@ -135,9 +140,19 @@ const getHitRate = async (
         JOIN nba_game g ON g.id = pg.game_id
         WHERE pg.player_id = ${player_id}
             ${opponent_id ? sql`AND pg.opponent_id = ${opponent_id}` : sql``}
+            ${fromSeasonOn(fromSeason)}
         ORDER BY g.game_date DESC
         LIMIT ${limit};
     `;
+    // fewer games than asked for: were older ones left out?
+    const older = fromSeason && result.length < limit ? await sql`
+        SELECT 1
+        FROM nba_player_game pg
+        JOIN nba_game g ON g.id = pg.game_id
+        WHERE pg.player_id = ${player_id} AND g.season < ${fromSeason}
+            ${opponent_id ? sql`AND pg.opponent_id = ${opponent_id}` : sql``}
+        LIMIT 1;
+    ` : [];
     const games = result.map((game) => ({
         game_id: game.game_id as string,
         game_date: game.game_date as Date,
@@ -158,6 +173,7 @@ const getHitRate = async (
         hits,
         hit_rate: games.length ? Math.round((hits / games.length) * 1000) / 10 : null,  // percent, 1 decimal
         average: games.length ? Math.round((total / games.length) * 10) / 10 : null,
+        older_hidden: older.length > 0,
         results: games,
     };
 };

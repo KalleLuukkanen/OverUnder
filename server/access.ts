@@ -31,4 +31,8 @@ const allowSeason = (req: Request, res: Response, season: string) => {
     return false;
 };
 
-export { seasonOfGameId, seasonOfDate, isOpenSeason, allowSeason };
+// oldest season the request may see game by game in lists that span seasons (latest games, hit rates,
+// head to head): the previous season when signed out, undefined = every season
+const openFrom = (req: Request) => (req as Request & { userId?: string }).userId ? undefined : previousSeason();
+
+export { seasonOfGameId, seasonOfDate, isOpenSeason, allowSeason, openFrom };

@@ -1,12 +1,18 @@
 import type { NbaHitRate } from "../../../types/nba";
 import { Link } from "react-router-dom";
 import { overtimeLabel } from "../../../utils/nbaGame";
+import OlderGamesNote from "../../../components/OlderGamesNote";
+import SignInPrompt from "../../../components/SignInPrompt";
 
 // hit rate percentage, a bar, and every game as a hit (✓) or miss (✗)
 // children (the splits) go between the bar and the game list
 function HitRateResult({ result, children }: { result: NbaHitRate, children?: React.ReactNode }) {
 
-    if (result.games === 0) return <p className="text-zinc-500">No games found</p>;
+    if (result.games === 0) {
+        return result.older_hidden ?
+            <SignInPrompt title="Older games are for members" text="This player's games are from past seasons. Sign up free to check props on them." /> :
+            <p className="text-zinc-500">No games found</p>;
+    }
 
     const good = result.hit_rate !== null && result.hit_rate >= 50;
 
@@ -45,6 +51,7 @@ function HitRateResult({ result, children }: { result: NbaHitRate, children?: Re
                     </li>
                 ))}
             </ul>
+            {result.older_hidden && <OlderGamesNote />}
         </div>
     )
 }

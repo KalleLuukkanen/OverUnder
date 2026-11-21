@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import * as nbaGamesRepository from "../../repositories/nba/nbaGamesRepository.js";
-import { allowSeason, seasonOfDate, seasonOfGameId } from "../../access.js";
+import { allowSeason, openFrom, seasonOfDate, seasonOfGameId } from "../../access.js";
 
 const DATE_FORMAT = /^\d{4}-\d{2}-\d{2}$/;   // '2026-11-14'
 const SEASON_FORMAT = /^\d{4}-\d{2}$/;       // '2026-27'
@@ -107,14 +107,14 @@ const getTeamsNextGame = async (req: Request, res: Response) => {
     return res.status(200).json(game);
 };
 
-// played games between two teams, latest first
+// played games between two teams, latest first (signed out: only the open seasons)
 const getHeadToHeadGames = async (req: Request, res: Response) => {
     const team_id = Number(req.params.teamId);
     const opponent_id = Number(req.params.opponentId);
     if (!Number.isInteger(team_id) || !Number.isInteger(opponent_id)) {
         return res.status(400).json({ error: "Missing or invalid team id" });
     }
-    const games = await nbaGamesRepository.getHeadToHeadGames(team_id, opponent_id);
+    const games = await nbaGamesRepository.getHeadToHeadGames(team_id, opponent_id, openFrom(req));
     return res.status(200).json(games);
 };
 

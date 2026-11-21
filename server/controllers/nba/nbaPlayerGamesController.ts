@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import * as nbaPlayerGamesRepository from "../../repositories/nba/nbaPlayerGamesRepository.js";
 import { currentSeason } from "../../repositories/nba/nbaGamesRepository.js";
-import { allowSeason, seasonOfGameId } from "../../access.js";
+import { allowSeason, openFrom, seasonOfGameId } from "../../access.js";
 
 const SEASON_FORMAT = /^\d{4}-\d{2}$/;   // '2026-27'
 const MAX_LIMIT = 100;
@@ -21,7 +21,7 @@ const getPlayersGames = async (req: Request, res: Response) => {
     return res.status(200).json(games);
 };
 
-// get player's last n games, body: { limit?: 10 }
+// get player's last n games, body: { limit?: 10 } (signed out: only the open seasons)
 const getPlayersLastGames = async (req: Request, res: Response) => {
     const player_id = Number(req.params.playerId);
     if (!Number.isInteger(player_id)) {
@@ -31,11 +31,11 @@ const getPlayersLastGames = async (req: Request, res: Response) => {
     if (!Number.isInteger(limit) || limit < 1 || limit > MAX_LIMIT) {
         return res.status(400).json({ error: `Invalid limit, expected 1-${MAX_LIMIT}` });
     }
-    const games = await nbaPlayerGamesRepository.getPlayersLastGames(player_id, limit);
+    const games = await nbaPlayerGamesRepository.getPlayersLastGames(player_id, limit, openFrom(req));
     return res.status(200).json(games);
 };
 
-// get player's last n games against given team, body: { limit?: 10 }
+// get player's last n games against given team, body: { limit?: 10 } (signed out: only the open seasons)
 const getPlayersLastGamesVsOpponent = async (req: Request, res: Response) => {
     const player_id = Number(req.params.playerId);
     const opponent_id = Number(req.params.opponentId);
@@ -46,7 +46,7 @@ const getPlayersLastGamesVsOpponent = async (req: Request, res: Response) => {
     if (!Number.isInteger(limit) || limit < 1 || limit > MAX_LIMIT) {
         return res.status(400).json({ error: `Invalid limit, expected 1-${MAX_LIMIT}` });
     }
-    const games = await nbaPlayerGamesRepository.getPlayersLastGamesVsOpponent(player_id, opponent_id, limit);
+    const games = await nbaPlayerGamesRepository.getPlayersLastGamesVsOpponent(player_id, opponent_id, limit, openFrom(req));
     return res.status(200).json(games);
 };
 
@@ -74,6 +74,7 @@ const getPlayersSeasonAverages = async (req: Request, res: Response) => {
     if (typeof season !== "string" || !SEASON_FORMAT.test(season)) {
         return res.status(400).json({ error: "Invalid season, expected format '2026-27'" });
     }
+    if (!allowSeason(req, res, season)) return;
     const averages = await nbaPlayerGamesRepository.getPlayersSeasonAverages(player_id, season);
     if (!averages) {
         return res.status(404).json({ error: "No games played in given season" });
@@ -99,7 +100,7 @@ const readProp = (body: Record<string, unknown> | undefined) => {
 };
 
 // hit rate of a prop, optionally only against given team (opponentId param)
-// body: { stat: 'fgm', line: 5.5, side?: 'over' | 'under', limit?: 10 }
+// body: { stat: 'fgm', line: 5.5, side?: 'over' | 'under', limit?: 10 } (signed out: only the open seasons)
 const getHitRate = async (req: Request, res: Response) => {
     const player_id = Number(req.params.playerId);
     const opponent_id = req.params.opponentId ? Number(req.params.opponentId) : undefined;
@@ -114,7 +115,7 @@ const getHitRate = async (req: Request, res: Response) => {
     if (!Number.isInteger(limit) || limit < 1 || limit > MAX_LIMIT) {
         return res.status(400).json({ error: `Invalid limit, expected 1-${MAX_LIMIT}` });
     }
-    const hitRate = await nbaPlayerGamesRepository.getHitRate(player_id, prop.stat, prop.line, prop.side, limit, opponent_id);
+    const hitRate = await nbaPlayerGamesRepository.getHitRate(player_id, prop.stat, prop.line, prop.side, limit, opponent_id, openFrom(req));
     return res.status(200).json(hitRate);
 };
 

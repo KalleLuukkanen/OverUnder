@@ -101,14 +101,19 @@ const summarize = (market: Market, values: number[], line: number, side: Side) =
 };
 
 // hit rate of a team bet in the team's latest games (optionally only vs one opponent), game by game
-const getTeamHitRate = async (team_id: number, market: Market, line: number, side: Side, limit: number, opponent_id?: number) => {
+// fromSeason = only games from that season on (signed out); older_hidden tells there were older games left out
+const getTeamHitRate = async (team_id: number, market: Market, line: number, side: Side, limit: number, opponent_id?: number, fromSeason?: string) => {
     // games missing the stat are skipped, so a few extra are fetched
-    const games = withValues(market, await getTeamGames(team_id, { opponent_id, limit: limit + 5 })).slice(0, limit);
+    const games = withValues(market, await getTeamGames(team_id, { opponent_id, fromSeason, limit: limit + 5 })).slice(0, limit);
+    const older = fromSeason && games.length < limit ?
+        (await getTeamGames(team_id, { opponent_id, toSeason: seasonBefore(fromSeason), limit: 1 })).length > 0 :
+        false;
     return {
         market,
         line,
         side,
         ...summarize(market, games.map((g) => g.value), line, side),
+        older_hidden: older,
         results: games.map(({ game, value }) => ({
             game_id: game.game_id,
             game_date: game.game_date,

@@ -132,10 +132,12 @@ const getTeamsNextGame = async (team_id: number) => {
 };
 
 // get played games between two teams (all seasons in db), latest first
-const getHeadToHeadGames = async (team_id: number, opponent_id: number) => {
+// fromSeason = only games from that season on (signed out)
+const getHeadToHeadGames = async (team_id: number, opponent_id: number, fromSeason?: string) => {
     const result = await sql`
         ${gamesWithTeams()}
         WHERE g.game_date < current_date
+            ${fromSeason ? sql`AND g.season >= ${fromSeason}` : sql``}
             AND ((g.home_team_id = ${team_id} AND g.away_team_id = ${opponent_id})
               OR (g.home_team_id = ${opponent_id} AND g.away_team_id = ${team_id}))
         ORDER BY g.game_date DESC, g.start_time DESC NULLS LAST;

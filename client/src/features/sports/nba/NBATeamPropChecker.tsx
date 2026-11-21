@@ -1,4 +1,5 @@
 import type { NbaGame, NbaHitRateSplit, NbaSide, NbaTeam, NbaTeamHitRate, NbaTeamMarket } from "../../../types/nba";
+import OlderGamesNote from "../../../components/OlderGamesNote";
 import { getAll, getTeamHitRate, getTeamHitRateSplits } from "../../../api/nba/nbaTeamsApi";
 import { getTeamsNextGame } from "../../../api/nba/nbaGamesApi";
 import { useCallback, useState, useEffect } from "react";
@@ -61,7 +62,7 @@ function TeamHitRateSplits({ team_id, result, opponent_id }: { team_id: number, 
 // hit rate, a bar, the splits and every game with its score and the bet's value
 function TeamHitRateResult({ team, result, children }: { team: NbaTeam, result: NbaTeamHitRate, children?: React.ReactNode }) {
 
-    if (result.games === 0) return <p className="text-zinc-500">No games found</p>;
+    if (result.games === 0) return result.older_hidden ? <OlderGamesNote /> : <p className="text-zinc-500">No games found</p>;
 
     const good = result.hit_rate !== null && result.hit_rate >= 50;
     const margins = result.market === "win" || result.market === "spread";
@@ -109,6 +110,7 @@ function TeamHitRateResult({ team, result, children }: { team: NbaTeam, result: 
                     );
                 })}
             </ul>
+            {result.older_hidden && <OlderGamesNote />}
         </div>
     )
 }

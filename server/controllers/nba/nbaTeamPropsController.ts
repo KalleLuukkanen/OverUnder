@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import * as nbaTeamPropsRepository from "../../repositories/nba/nbaTeamPropsRepository.js";
+import { openFrom } from "../../access.js";
 
 const MAX_LIMIT = 100;
 
@@ -30,7 +31,7 @@ const readTeams = (req: Request) => {
     return { team_id, opponent_id: opponent_id as number | undefined };
 };
 
-// hit rate of a team bet in the latest games
+// hit rate of a team bet in the latest games (signed out: only the open seasons)
 // body: { market: 'total', line: 228.5, side?: 'over' | 'under', limit?: 10, opponent_id?: 1610612738 }
 const getTeamHitRate = async (req: Request, res: Response) => {
     const teams = readTeams(req);
@@ -45,7 +46,7 @@ const getTeamHitRate = async (req: Request, res: Response) => {
     if (!Number.isInteger(limit) || limit < 1 || limit > MAX_LIMIT) {
         return res.status(400).json({ error: `Invalid limit, expected 1-${MAX_LIMIT}` });
     }
-    const hitRate = await nbaTeamPropsRepository.getTeamHitRate(teams.team_id, bet.market, bet.line, bet.side, limit, teams.opponent_id);
+    const hitRate = await nbaTeamPropsRepository.getTeamHitRate(teams.team_id, bet.market, bet.line, bet.side, limit, teams.opponent_id, openFrom(req));
     return res.status(200).json(hitRate);
 };
 
