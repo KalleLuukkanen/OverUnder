@@ -7,6 +7,7 @@ import * as nbaGamesController from "./controllers/nba/nbaGamesController.js";
 import * as nbaTeamsController from "./controllers/nba/nbaTeamsController.js";
 import * as nbaPlayersController from "./controllers/nba/nbaPlayersController.js";
 import * as nbaPlayerGamesController from "./controllers/nba/nbaPlayerGamesController.js";
+import * as nbaSeasonController from "./controllers/nba/nbaSeasonController.js";
 import * as parlayController from "./controllers/parlayController.js";
 
 const app = express();
@@ -55,6 +56,8 @@ app.get("/api/me", (req, res) => {
 
 // seasons
 app.get("/api/nba/seasons", nbaGamesController.getSeasons);
+app.get("/api/nba/season/current/standings", nbaSeasonController.getStandings);
+app.get("/api/nba/season/current/leaders", nbaSeasonController.getLeaders);
 
 // games
 app.get("/api/nba/games/upcoming", nbaGamesController.getUpcomingGames);

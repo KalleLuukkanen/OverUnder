@@ -267,3 +267,41 @@ export type Parlay = {
     status: "empty" | "pending" | "won" | "lost" | "void";
     legs: ParlayLeg[];
 };
+
+// a team's row in the current season's standings (regular season games only)
+export type NbaStanding = {
+    team_id: number;
+    abbreviation: string;
+    name: string;
+    conference: "East" | "West";
+    wins: number;
+    losses: number;
+    pct: number;                   // 0-1
+    home_wins: number;
+    home_losses: number;
+    away_wins: number;
+    away_losses: number;
+    last10_wins: number;
+    last10_losses: number;
+    streak: string | null;         // 'W3', 'L1', null before the first game
+    points_for: number | null;     // per game
+    points_against: number | null;
+};
+
+export type NbaLeaderStat = "pts" | "reb" | "ast" | "stl" | "blk" | "fg3m";
+
+export type NbaLeader = {
+    player_id: number;
+    name: string;
+    team: string;
+    team_id: number;
+    games: number;
+    value: number;                 // per game
+};
+
+// current season's league leaders, min_games = games needed to be listed
+export type NbaLeaders = {
+    season: string;
+    min_games: number;
+    leaders: Record<NbaLeaderStat, NbaLeader[]>;
+};
