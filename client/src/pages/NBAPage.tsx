@@ -3,9 +3,10 @@ import NBASeasonPastGames from "../features/sports/nba/NBASeasonPastGames";
 import NBALeaders from "../features/sports/nba/NBALeaders";
 import NBAStandings from "../features/sports/nba/NBAStandings";
 import PlayerSearch from "../features/sports/nba/PlayerSearch";
-import TeamList from "../features/sports/nba/TeamList";
+import TeamsMenu from "../features/sports/nba/TeamsMenu";
 import SeasonSearch from "../features/sports/nba/SeasonSearch";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
+import useDismiss from "../utils/useDismiss";
 import { useSearchParams } from "react-router-dom";
 import { ChevronDown } from "lucide-react";
 import { currentSeason } from "../utils/nbaGame";
@@ -35,19 +36,8 @@ function SeasonMenu({ season, view, onSelect }: { season: string, view: View, on
     const ref = useRef<HTMLDivElement>(null);
     const selected = SEASON_VIEWS.find((v) => v.key === view);
 
-    useEffect(() => {
-        if (!open) return;
-        const onClick = (e: MouseEvent) => {
-            if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-        };
-        const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setOpen(false); };
-        document.addEventListener("mousedown", onClick);
-        document.addEventListener("keydown", onKey);
-        return () => {
-            document.removeEventListener("mousedown", onClick);
-            document.removeEventListener("keydown", onKey);
-        };
-    }, [open]);
+    const close = useCallback(() => setOpen(false), []);
+    useDismiss(open, close, ref);
 
     return (
         <div className="relative" ref={ref}>
@@ -91,7 +81,8 @@ function NBAPage() {
 
     return (
         <div className="flex flex-col gap-4">
-            <div className="flex flex-col lg:flex-row lg:items-center gap-4 justify-between">
+            {/* relative: the teams menu opens across this whole header row */}
+            <div className="relative flex flex-col lg:flex-row lg:items-center gap-4 justify-between">
                 <div className="flex flex-wrap items-baseline gap-x-5 gap-y-2">
                     <h1 className="text-3xl font-bold">NBA</h1>
                     <nav className="flex flex-wrap items-baseline gap-x-4 gap-y-1 text-sm" aria-label="NBA views">
@@ -104,11 +95,11 @@ function NBAPage() {
                         >
                             {SEARCH_VIEW.label}
                         </button>
+                        <TeamsMenu buttonClass={menuButton(false)} />
                     </nav>
                 </div>
                 <PlayerSearch />
             </div>
-            <TeamList />
             <section className="flex flex-col gap-3 bg-zinc-900 border border-zinc-800 rounded-xl p-4">
                 <h2 className="text-lg font-semibold">
                     {current.label}
