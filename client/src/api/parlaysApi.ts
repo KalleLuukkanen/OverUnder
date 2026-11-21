@@ -1,5 +1,10 @@
 import { get, post, patch, del } from "./apiClient";
-import type { NbaSide, NbaStat, Parlay } from "../types/nba";
+import type { NbaSide, NbaStat, NbaTeamMarket, Parlay } from "../types/nba";
+
+// a new leg: a player prop or a team bet (win and spread need no side, win no line)
+export type NewLeg =
+    | { player_id: number, stat: NbaStat, line: number, side: NbaSide }
+    | { team_id: number, market: NbaTeamMarket, line: number, side: NbaSide };
 
 // member's parlays with legs, results and hit rates, newest first (401 if not signed in)
 const getParlays = () =>
@@ -16,8 +21,9 @@ const updateParlay = (parlayId: number, changes: { name?: string, odds?: number 
 const deleteParlay = (parlayId: number) =>
     del<null>(`/api/parlays/${parlayId}`);
 
-// adds a prop, the server ties it to the player's next game (400 if the player has none)
-const addLeg = (parlayId: number, leg: { player_id: number, stat: NbaStat, line: number, side: NbaSide }) =>
+// adds a player prop or a team bet, the server ties it to the player's / team's next game
+// 400 if there's no upcoming game or the leg clashes with one already in the parlay (same game, same outcome)
+const addLeg = (parlayId: number, leg: NewLeg) =>
     post<{ id: number }>(`/api/parlays/${parlayId}/legs`, leg);
 
 const deleteLeg = (parlayId: number, legId: number) =>

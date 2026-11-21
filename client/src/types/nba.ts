@@ -232,25 +232,22 @@ export type NbaPlayerCareer = {
 // void = the player didn't play, push = exactly on the line
 export type ParlayLegStatus = "pending" | "no_game" | "hit" | "miss" | "push" | "void";
 
-export type ParlayLeg = {
+// what every leg has: the game it's tied to, the line and its result
+type ParlayLegBase = {
     id: number;
     parlay_id: number;
-    player_id: number;
-    player_name: string;
-    stat: NbaStat;
-    line: number;
-    side: NbaSide;
+    line: number;                  // team bets: the spread for 'spread' (can be negative), 0 for 'win'
+    side: NbaSide;                 // 'over' for win and spread
     game: {
         id: string;
         game_date: string;
         start_time: string | null;
-        is_home: boolean;
+        is_home: boolean;          // the player's / team's side
         opponent: string;
         opponent_id: number;
     } | null;
     status: ParlayLegStatus;
-    value: number | null;          // the stat in the graded game
-    minutes: number | null;
+    value: number | null;          // the stat / bet value in the graded game (the margin for win and spread)
     hit_rates: {
         last5: NbaHitRateSplit | null;
         last10: NbaHitRateSplit | null;
@@ -258,6 +255,27 @@ export type ParlayLeg = {
         opponent: NbaHitRateSplit | null;
     };
 };
+
+// a player prop, e.g. Anthony Edwards over 25.5 points
+export type ParlayPlayerLeg = ParlayLegBase & {
+    kind: "player";
+    player_id: number;
+    player_name: string;
+    stat: NbaStat;
+    minutes: number | null;
+};
+
+// a team or game bet, e.g. LAL -5.5 or over 228.5 game total points
+export type ParlayTeamLeg = ParlayLegBase & {
+    kind: "team";
+    team_id: number;
+    team: string;                  // abbreviation
+    team_name: string;
+    market: NbaTeamMarket;
+    score: { team: number, opponent: number } | null;   // final score from the team's side, once played
+};
+
+export type ParlayLeg = ParlayPlayerLeg | ParlayTeamLeg;
 
 export type Parlay = {
     id: number;
@@ -304,4 +322,36 @@ export type NbaLeaders = {
     season: string;
     min_games: number;
     leaders: Record<NbaLeaderStat, NbaLeader[]>;
+};
+
+// team bets of the prop checker: win = moneyline, spread = the team's line (e.g. -5.5),
+// the rest over / under a line
+export type NbaTeamMarket = "win" | "spread" | "team_pts" | "opp_pts" | "total" | "h1_total" | "team_fg3m" | "team_reb";
+
+export type NbaTeamHitRate = {
+    market: NbaTeamMarket;
+    line: number;
+    side: NbaSide;
+    games: number;
+    hits: number;
+    hit_rate: number | null;       // percent, null if no games
+    average: number | null;        // average value, for win and spread the average margin
+    results: {
+        game_id: string;
+        game_date: string;
+        overtime_periods: number | null;
+        opponent: string;
+        is_home: boolean;
+        team_score: number;
+        opp_score: number;
+        value: number;             // the bet's value in that game, for win and spread the margin
+        hit: boolean;
+    }[];
+};
+
+export type NbaTeamHitRateSplits = {
+    market: NbaTeamMarket;
+    line: number;
+    side: NbaSide;
+    splits: NbaHitRateSplit[];
 };

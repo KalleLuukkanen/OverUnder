@@ -2,9 +2,9 @@ import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { Plus, Check } from "lucide-react";
 import { authClient } from "../../utils/auth";
-import { getParlays, createParlay, addLeg } from "../../api/parlaysApi";
+import { getParlays, createParlay, addLeg, type NewLeg } from "../../api/parlaysApi";
 import { ApiError } from "../../api/apiClient";
-import type { NbaSide, NbaStat, Parlay } from "../../types/nba";
+import type { Parlay } from "../../types/nba";
 
 const NEW = "new";
 
@@ -14,9 +14,10 @@ const defaultName = () => {
     return `Parlay ${d.getDate()}.${d.getMonth() + 1}.`;
 };
 
-// saves a checked prop to one of the member's open parlays or a new one
+// saves a checked player prop or team bet to one of the member's open parlays or a new one
+// the server refuses legs that clash with one already in the parlay, its reason is shown
 // signed out users see a small sign in link instead (parlays are a member feature)
-function AddToParlay({ player_id, stat, line, side }: { player_id: number, stat: NbaStat, line: number, side: NbaSide }) {
+function AddToParlay({ leg }: { leg: NewLeg }) {
 
     const { data: session } = authClient.useSession();
     const location = useLocation();
@@ -50,17 +51,18 @@ function AddToParlay({ player_id, stat, line, side }: { player_id: number, stat:
         return () => { cancelled = true };
     }, [session]);
 
-    // a new prop checked: the "added" note was for the previous one
+    // a new bet checked: the "added" note was for the previous one
+    const legKey = JSON.stringify(leg);
     useEffect(() => {
         setAdded(null);
         setError("");
-    }, [player_id, stat, line, side]);
+    }, [legKey]);
 
     if (!session) {
         return (
             <p className="text-sm text-zinc-500">
                 <Link className="text-sky-400 hover:underline" to="/auth" state={{ from: location.pathname + location.search }}>Sign in</Link>
-                {" "}to save props to parlays
+                {" "}to save bets to parlays
             </p>
         );
     }
@@ -81,10 +83,10 @@ function AddToParlay({ player_id, stat, line, side }: { player_id: number, stat:
                 parlayId = Number(target);
                 name = parlays.find((p) => p.id === parlayId)?.name ?? "parlay";
             }
-            await addLeg(parlayId, { player_id, stat, line, side });
+            await addLeg(parlayId, leg);
             setAdded(name);
         } catch (err) {
-            setError(err instanceof ApiError ? err.message : "Couldn't add the prop, please try again");
+            setError(err instanceof ApiError ? err.message : "Couldn't add the bet, please try again");
         } finally {
             setSaving(false);
         }

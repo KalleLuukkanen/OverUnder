@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import * as parlayRepository from "../repositories/parlayRepository.js";
 import { isStat } from "../repositories/nba/nbaPlayerGamesRepository.js";
+import { isMarket, MARKETS } from "../repositories/nba/nbaTeamPropsRepository.js";
 
 const MAX_PARLAYS = 100;
 const MAX_LEGS = 15;
@@ -99,31 +100,52 @@ const deleteParlay = async (req: Request, res: Response) => {
     return res.status(204).end();
 };
 
-// add a prop, body: { player_id, stat, line, side }, tied to the player's next game
+// add a player prop { player_id, stat, line, side } or a team bet { team_id, market, line?, side? },
+// tied to the player's / team's next game. Legs that clash with one already in the parlay are refused
 const addLeg = async (req: Request, res: Response) => {
     const parlay_id = await ownedParlayId(req, res);
     if (parlay_id === null) return;
-    const { player_id, stat, line, side } = req.body ?? {};
-    if (!Number.isInteger(player_id) || !(await parlayRepository.playerExists(player_id))) {
-        return res.status(400).json({ error: "Missing or invalid player" });
+    const body = req.body ?? {};
+    const isTeam = body.team_id !== undefined;
+
+    if (isTeam) {
+        if (!Number.isInteger(body.team_id) || !(await parlayRepository.teamExists(body.team_id))) {
+            return res.status(400).json({ error: "Missing or invalid team" });
+        }
+        if (typeof body.market !== "string" || !isMarket(body.market)) {
+            return res.status(400).json({ error: "Invalid bet" });
+        }
+    } else {
+        if (!Number.isInteger(body.player_id) || !(await parlayRepository.playerExists(body.player_id))) {
+            return res.status(400).json({ error: "Missing or invalid player" });
+        }
+        if (typeof body.stat !== "string" || !isStat(body.stat)) {
+            return res.status(400).json({ error: "Invalid stat" });
+        }
     }
-    if (typeof stat !== "string" || !isStat(stat)) {
-        return res.status(400).json({ error: "Invalid stat" });
-    }
-    if (typeof line !== "number" || !Number.isFinite(line) || line < 0 || line > 999) {
+
+    // win has no line or side, spread has a line (can be negative) but no side
+    const rules = isTeam ? MARKETS[body.market as keyof typeof MARKETS] : { line: true, side: true };
+    const line = rules.line ? body.line : 0;
+    const minLine = isTeam && body.market === "spread" ? -999 : 0;
+    if (typeof line !== "number" || !Number.isFinite(line) || line < minLine || line > 999) {
         return res.status(400).json({ error: "Missing or invalid line" });
     }
+    const side = rules.side ? body.side : "over";
     if (side !== "over" && side !== "under") {
         return res.status(400).json({ error: "Invalid side, expected 'over' or 'under'" });
     }
     if (await parlayRepository.countLegs(parlay_id) >= MAX_LEGS) {
         return res.status(400).json({ error: `A parlay can have at most ${MAX_LEGS} legs` });
     }
-    const id = await parlayRepository.addLeg(parlay_id, player_id, stat, line, side);
-    if (id === null) {
-        return res.status(400).json({ error: "This player has no upcoming game to bet on" });
+
+    const result = isTeam ?
+        await parlayRepository.addTeamLeg(parlay_id, body.team_id, body.market, line, side) :
+        await parlayRepository.addLeg(parlay_id, body.player_id, body.stat, line, side);
+    if ("error" in result) {
+        return res.status(400).json({ error: result.error });
     }
-    return res.status(201).json({ id });
+    return res.status(201).json({ id: result.id });
 };
 
 const deleteLeg = async (req: Request, res: Response) => {

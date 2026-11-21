@@ -3,7 +3,7 @@ import { getHitRateSplits } from "../../../api/nba/nbaPlayerGamesApi";
 import type { NbaHitRate, NbaHitRateSplit } from "../../../types/nba";
 
 // one sample: label, a small bar, hit rate, hits/games and average
-function SplitRow({ split }: { split: NbaHitRateSplit }) {
+export function SplitRow({ split }: { split: NbaHitRateSplit }) {
 
     if (split.games === 0 || split.hit_rate === null) {
         return (

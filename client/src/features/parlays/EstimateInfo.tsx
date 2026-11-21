@@ -1,15 +1,8 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Info } from "lucide-react";
 import type { ParlayLeg } from "../../types/nba";
-import { STATS } from "../sports/nba/hitRateStats";
 import { estimateLeg, estimateParlay, percent, WEIGHTS } from "./parlayEstimate";
-
-// short name of a leg, e.g. 'Edwards O 25.5 PTS'
-const legName = (leg: ParlayLeg) => {
-    const lastName = leg.player_name.split(" ").slice(1).join(" ") || leg.player_name;
-    const stat = STATS.find((s) => s.value === leg.stat)?.short ?? leg.stat.toUpperCase();
-    return `${lastName} ${leg.side === "over" ? "O" : "U"} ${leg.line} ${stat}`;
-};
+import { legName } from "./legLabels";
 
 // ⓘ next to the estimated chance: hovering or clicking shows how it was calculated,
 // with the numbers of every leg of this parlay

@@ -18,7 +18,7 @@ function PropChecker() {
         <section className="flex flex-col gap-4 bg-zinc-900 border border-zinc-800 rounded-xl p-4 sm:p-6">
             <div className="flex flex-col gap-1">
                 <h1 className="text-2xl sm:text-3xl font-bold">Check a prop</h1>
-                <p className="text-zinc-400">How often would your bet have hit? Pick a player, a stat and a line.</p>
+                <p className="text-zinc-400">How often would your bet have hit? Pick a player or a team, a bet and a line.</p>
             </div>
             {/* league switcher, scrolls sideways on small screens */}
             <div className="flex gap-2 p-1 w-fit max-w-full overflow-x-auto bg-zinc-950 border border-zinc-800 rounded-lg">

@@ -1,5 +1,6 @@
 import postgres from "postgres";
 import { getHitRateSplits } from "./nba/nbaPlayerGamesRepository.js";
+import { getTeamHitRateSplits, isHit, MARKETS, type Market, type TeamGameRow } from "./nba/nbaTeamPropsRepository.js";
 
 const sql = postgres();
 
@@ -32,6 +33,26 @@ const gradeLeg = (leg: postgres.Row): { status: LegStatus, value: number | null 
     return { status: (leg.side === "over") === over ? "hit" : "miss", value };
 };
 
+// grades a team bet from its game's score and team box scores
+// a spread or total exactly on the line is a push; a missing team box score keeps the leg pending
+const gradeTeamLeg = (leg: postgres.Row): { status: LegStatus, value: number | null } => {
+    if (!leg.game_id) return { status: "no_game", value: null };
+    if (leg.home_score === null) return { status: "pending", value: null };
+    const market = leg.market as Market;
+    const isHome = leg.team_id === leg.home_team_id;
+    const row = {
+        team_score: isHome ? leg.home_score : leg.away_score,
+        opp_score: isHome ? leg.away_score : leg.home_score,
+        team_fg3m: leg.team_fg3m,
+        team_reb: leg.team_reb,
+        h1_total: leg.h1_total,
+    } as TeamGameRow;
+    const value = MARKETS[market].value(row);
+    if (value === null) return { status: "pending", value: null };
+    if (market === "spread" ? value + leg.line === 0 : market !== "win" && value === leg.line) return { status: "push", value };
+    return { status: isHit(market, value, leg.line, leg.side) ? "hit" : "miss", value };
+};
+
 // parlay result from its legs: any miss loses it, it's won when every leg is settled and one hit
 // (void and push legs drop out of the parlay like at a bookmaker)
 const gradeParlay = (statuses: LegStatus[]) => {
@@ -54,37 +75,62 @@ const getParlays = async (user_id: string) => {
 
     const legs = await sql`
         SELECT
-            l.id, l.parlay_id, l.player_id, p.name AS player_name, l.stat, l.line::float8 AS line, l.side, l.game_id,
+            l.id, l.parlay_id, l.player_id, p.name AS player_name, l.stat, l.market, l.line::float8 AS line, l.side, l.game_id,
             g.game_date, g.game_date::text AS game_day, g.season, g.start_time, g.home_score, g.away_score, g.overtime_periods,
             g.home_team_id, nba_team_abbreviation(g.home_team_id, g.season) AS home_team,
             g.away_team_id, nba_team_abbreviation(g.away_team_id, g.season) AS away_team,
-            -- the player's team in that game: from the box score once played, otherwise their current team
-            COALESCE(pg.team_id, p.team_id) AS team_id,
+            -- team bet: the bet's team; player prop: the player's team in that game
+            -- (from the box score once played, otherwise their current team)
+            COALESCE(l.team_id, pg.team_id, p.team_id) AS team_id,
+            nba_team_abbreviation(l.team_id, g.season) AS team, nba_team_name(l.team_id, g.season) AS team_name,
             pg.minutes::float8 AS minutes, pg.pts, pg.reb, pg.ast, pg.stl, pg.blk, pg.tov,
-            pg.fgm, pg.fga, pg.fg3m, pg.fg3a, pg.ftm, pg.fta
+            pg.fgm, pg.fga, pg.fg3m, pg.fg3a, pg.ftm, pg.fta,
+            tg.fg3m AS team_fg3m, tg.reb AS team_reb, tg.q1 + tg.q2 + og.q1 + og.q2 AS h1_total
         FROM parlay_leg l
-        JOIN nba_player p ON p.id = l.player_id
+        LEFT JOIN nba_player p ON p.id = l.player_id
         LEFT JOIN nba_game g ON g.id = l.game_id
         LEFT JOIN nba_player_game pg ON pg.game_id = l.game_id AND pg.player_id = l.player_id
+        LEFT JOIN nba_team_game tg ON tg.game_id = l.game_id AND tg.team_id = l.team_id
+        LEFT JOIN nba_team_game og ON og.game_id = l.game_id AND l.team_id IS NOT NULL AND og.team_id <> l.team_id
         WHERE l.parlay_id IN ${sql(parlays.map((p) => p.id))}
         ORDER BY l.created_at;
     `;
 
     const gradedLegs = await Promise.all(legs.map(async (leg) => {
-        const { status, value } = gradeLeg(leg);
+        const isTeam = leg.market !== null;
+        const { status, value } = isTeam ? gradeTeamLeg(leg) : gradeLeg(leg);
         const isHome = leg.game_id ? leg.team_id === leg.home_team_id : null;
         const opponent_id = leg.game_id ? (isHome ? leg.away_team_id : leg.home_team_id) : null;
         // hit rates as they were before the leg's game, so a played leg keeps its pre-game estimate
         const before = leg.game_id ? { date: leg.game_day as string, season: leg.season as string } : undefined;
-        const splits = await getHitRateSplits(leg.player_id, leg.stat, leg.line, leg.side as Side, opponent_id ?? undefined, before);
+        const splits = isTeam ?
+            await getTeamHitRateSplits(leg.team_id, leg.market as Market, leg.line, leg.side as Side, opponent_id ?? undefined, before) :
+            await getHitRateSplits(leg.player_id, leg.stat, leg.line, leg.side as Side, opponent_id ?? undefined, before);
         // only the samples shown with a leg
         const rate = (key: string) => splits.splits.find((s) => s.key === key) ?? null;
-        return {
-            id: leg.id as number,
-            parlay_id: leg.parlay_id as number,
+        // what the leg is about: a player's stat or a team's bet
+        const subject = isTeam ? {
+            kind: "team" as const,
+            team_id: leg.team_id as number,
+            team: leg.team as string,
+            team_name: leg.team_name as string,
+            market: leg.market as Market,
+            // the final score from the team's side, once played
+            score: leg.home_score === null || !leg.game_id ? null : {
+                team: (isHome ? leg.home_score : leg.away_score) as number,
+                opponent: (isHome ? leg.away_score : leg.home_score) as number,
+            },
+        } : {
+            kind: "player" as const,
             player_id: leg.player_id as number,
             player_name: leg.player_name as string,
             stat: leg.stat as string,
+            minutes: leg.minutes as number | null,
+        };
+        return {
+            id: leg.id as number,
+            parlay_id: leg.parlay_id as number,
+            ...subject,
             line: leg.line as number,
             side: leg.side as Side,
             game: leg.game_id ? {
@@ -97,7 +143,6 @@ const getParlays = async (user_id: string) => {
             } : null,
             status,
             value,
-            minutes: leg.minutes as number | null,
             hit_rates: {
                 last5: rate("last5"),
                 last10: rate("last10"),
@@ -180,16 +225,104 @@ const playerExists = async (player_id: number) => {
     return result.length > 0;
 };
 
-// adds a prop to the parlay, tied to the player's next game, null if the player has no upcoming game
+// team's next game that hasn't started yet, null if none scheduled
+const nextGameOfTeam = async (team_id: number) => {
+    const result = await sql`
+        SELECT g.id
+        FROM nba_game g
+        WHERE ${team_id} IN (g.home_team_id, g.away_team_id) AND g.home_score IS NULL
+            AND COALESCE(g.start_time > now(), g.game_date >= current_date)
+        ORDER BY g.game_date, g.start_time
+        LIMIT 1;
+    `;
+    return (result[0]?.id as string | undefined) ?? null;
+};
+
+const teamExists = async (team_id: number) => {
+    const result = await sql`SELECT 1 FROM nba_team WHERE id = ${team_id};`;
+    return result.length > 0;
+};
+
+// a leg as the parlay rules see it: the game and either the player's stat or the team's bet
+type RuleLeg = {
+    game_id: string;
+    home_team_id: number;
+    away_team_id: number;
+    player_id: number | null;
+    stat: string | null;
+    team_id: number | null;
+    market: string | null;
+};
+
+// parlay rules like at bookmakers: legs on the same outcome of one game can't be combined,
+// since they either contradict each other (over and under) or depend on each other (moneyline and spread)
+// a leg's key and the reason it's blocked: two legs with the same key don't go in the same parlay
+const ruleOf = (leg: RuleLeg) => {
+    const game = leg.game_id;
+    if (leg.player_id !== null) {
+        return { key: `player:${game}:${leg.player_id}:${leg.stat}`, reason: "This player already has a prop on that stat for the same game in this parlay" };
+    }
+    const other = leg.team_id === leg.home_team_id ? leg.away_team_id : leg.home_team_id;
+    switch (leg.market) {
+        case "win":
+        case "spread":
+            return { key: `result:${game}`, reason: "A parlay can have only one moneyline or spread bet per game (on either team)" };
+        case "total":
+            return { key: `total:${game}`, reason: "This game's total is already in this parlay" };
+        case "h1_total":
+            return { key: `h1_total:${game}`, reason: "This game's 1st half total is already in this parlay" };
+        // a team's points and its opponent's 'opponent points' are the same number
+        case "team_pts":
+            return { key: `points:${game}:${leg.team_id}`, reason: "This team's points in that game are already in this parlay" };
+        case "opp_pts":
+            return { key: `points:${game}:${other}`, reason: "This team's points in that game are already in this parlay" };
+        default:
+            return { key: `${leg.market}:${game}:${leg.team_id}`, reason: "This team already has that bet for the same game in this parlay" };
+    }
+};
+
+// the reason the new leg can't join the parlay, null if it's allowed
+const ruleConflict = async (parlay_id: number, newLeg: Omit<RuleLeg, "home_team_id" | "away_team_id">) => {
+    const games = await sql`SELECT home_team_id, away_team_id FROM nba_game WHERE id = ${newLeg.game_id};`;
+    const rule = ruleOf({ ...newLeg, home_team_id: games[0].home_team_id, away_team_id: games[0].away_team_id });
+    const legs = await sql`
+        SELECT l.game_id, g.home_team_id, g.away_team_id, l.player_id, l.stat, l.team_id, l.market
+        FROM parlay_leg l
+        JOIN nba_game g ON g.id = l.game_id
+        WHERE l.parlay_id = ${parlay_id};
+    `;
+    const clash = legs.some((l) => ruleOf(l as unknown as RuleLeg).key === rule.key);
+    return clash ? rule.reason : null;
+};
+
+// adds a player prop to the parlay, tied to the player's next game
+// returns the new id, or the reason it can't be added
 const addLeg = async (parlay_id: number, player_id: number, stat: string, line: number, side: Side) => {
     const game_id = await nextGameOfPlayer(player_id);
-    if (!game_id) return null;
+    if (!game_id) return { error: "This player has no upcoming game to bet on" };
+    const conflict = await ruleConflict(parlay_id, { game_id, player_id, stat, team_id: null, market: null });
+    if (conflict) return { error: conflict };
     const result = await sql`
         INSERT INTO parlay_leg (parlay_id, player_id, game_id, stat, line, side)
         VALUES (${parlay_id}, ${player_id}, ${game_id}, ${stat}, ${line}, ${side})
         RETURNING id;
     `;
-    return result[0].id as number;
+    return { id: result[0].id as number };
+};
+
+// adds a team bet to the parlay, tied to the team's next game
+// returns the new id, or the reason it can't be added
+const addTeamLeg = async (parlay_id: number, team_id: number, market: Market, line: number, side: Side) => {
+    const game_id = await nextGameOfTeam(team_id);
+    if (!game_id) return { error: "This team has no upcoming game to bet on" };
+    const conflict = await ruleConflict(parlay_id, { game_id, player_id: null, stat: null, team_id, market });
+    if (conflict) return { error: conflict };
+    const result = await sql`
+        INSERT INTO parlay_leg (parlay_id, team_id, game_id, market, line, side)
+        VALUES (${parlay_id}, ${team_id}, ${game_id}, ${market}, ${line}, ${side})
+        RETURNING id;
+    `;
+    return { id: result[0].id as number };
 };
 
 // removes a leg, false if it isn't in that parlay
@@ -207,6 +340,8 @@ export {
     deleteParlay,
     countLegs,
     playerExists,
+    teamExists,
     addLeg,
+    addTeamLeg,
     deleteLeg,
 };

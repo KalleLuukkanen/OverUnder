@@ -7,10 +7,10 @@ import { ApiError } from "../api/apiClient";
 import type { NbaHitRateSplit, Parlay, ParlayLeg, ParlayLegStatus } from "../types/nba";
 import Loading from "../components/Loading";
 import SignInPrompt from "../components/SignInPrompt";
-import { STATS } from "../features/sports/nba/hitRateStats";
 import { gameDateTime } from "../utils/nbaGame";
 import { estimateParlay, isSettled, percent } from "../features/parlays/parlayEstimate";
 import EstimateInfo from "../features/parlays/EstimateInfo";
+import { legBet, legOutcome } from "../features/parlays/legLabels";
 
 const PARLAY_STATUS: Record<Parlay["status"], { label: string, className: string }> = {
     empty: { label: "Empty", className: "bg-zinc-800 text-zinc-400" },
@@ -40,11 +40,12 @@ function RateChip({ label, split }: { label: string, split: NbaHitRateSplit | nu
     );
 }
 
-// one leg: result, player and prop, game, hit rates; open legs can be removed
+// one leg: result, player prop or team bet, game, hit rates; open legs can be removed
 function LegRow({ leg, onRemove }: { leg: ParlayLeg, onRemove: () => void }) {
 
     const status = LEG_STATUS[leg.status];
-    const statLabel = STATS.find((s) => s.value === leg.stat)?.short ?? leg.stat.toUpperCase();
+    const outcome = legOutcome(leg);
+    const name = leg.kind === "player" ? leg.player_name : leg.team_name;
     const open = leg.status === "pending" || leg.status === "no_game";
 
     return (
@@ -54,9 +55,14 @@ function LegRow({ leg, onRemove }: { leg: ParlayLeg, onRemove: () => void }) {
             </span>
             <div className="flex flex-col min-w-0 flex-1">
                 <span>
-                    <Link className="font-medium hover:text-sky-400 hover:underline" to={`/nba/player/${leg.player_id}`}>{leg.player_name}</Link>
-                    <span className="ml-2 text-zinc-300"><span className="capitalize">{leg.side}</span> {leg.line} {statLabel}</span>
-                    {leg.value !== null && <span className="ml-2 text-zinc-500">· had {leg.value}</span>}
+                    <Link
+                        className="font-medium hover:text-sky-400 hover:underline"
+                        to={leg.kind === "player" ? `/nba/player/${leg.player_id}` : `/nba/team/${leg.team_id}`}
+                    >
+                        {name}
+                    </Link>
+                    <span className="ml-2 text-zinc-300">{legBet(leg)}</span>
+                    {outcome && <span className="ml-2 text-zinc-500">· {outcome}</span>}
                 </span>
                 <span className="text-sm text-zinc-500">
                     {leg.game ?
@@ -77,7 +83,7 @@ function LegRow({ leg, onRemove }: { leg: ParlayLeg, onRemove: () => void }) {
                 <button
                     className="self-start sm:self-center p-1 rounded-md cursor-pointer text-zinc-500 hover:bg-zinc-800 hover:text-white"
                     type="button"
-                    aria-label={`Remove ${leg.player_name} from the parlay`}
+                    aria-label={`Remove ${name} from the parlay`}
                     onClick={onRemove}
                 >
                     <X size={16} />
@@ -279,6 +285,10 @@ function ParlaysPage() {
                 <div className="flex flex-col gap-1">
                     <h1 className="flex items-center gap-2 text-3xl font-bold"><Layers size={26} className="text-sky-400" /> Parlays</h1>
                     <p className="text-sm text-zinc-500">Legs are graded automatically from the box score once their game is played.</p>
+                    <p className="text-sm text-zinc-500">
+                        Like at bookmakers, one game can't have two bets on the same outcome: one moneyline or spread,
+                        one game total, one 1st half total, one bet per team stat, and one prop per player stat.
+                    </p>
                 </div>
                 <form className="flex gap-2" onSubmit={create}>
                     <input

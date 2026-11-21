@@ -8,6 +8,7 @@ import * as nbaTeamsController from "./controllers/nba/nbaTeamsController.js";
 import * as nbaPlayersController from "./controllers/nba/nbaPlayersController.js";
 import * as nbaPlayerGamesController from "./controllers/nba/nbaPlayerGamesController.js";
 import * as nbaSeasonController from "./controllers/nba/nbaSeasonController.js";
+import * as nbaTeamPropsController from "./controllers/nba/nbaTeamPropsController.js";
 import * as parlayController from "./controllers/parlayController.js";
 
 const app = express();
@@ -79,6 +80,8 @@ app.get("/api/nba/teams/:teamId/games/past", nbaGamesController.getTeamsPastGame
 app.get("/api/nba/teams/:teamId/games/upcoming", nbaGamesController.getTeamsUpcomingGames);
 app.get("/api/nba/teams/:teamId/games/next", nbaGamesController.getTeamsNextGame);
 app.get("/api/nba/teams/:teamId/vs/:opponentId/games", nbaGamesController.getHeadToHeadGames);
+app.post("/api/nba/teams/:teamId/hit-rate", nbaTeamPropsController.getTeamHitRate);
+app.post("/api/nba/teams/:teamId/hit-rate/splits", nbaTeamPropsController.getTeamHitRateSplits);
 
 // players
 app.post("/api/nba/players/name", nbaPlayersController.getByName);
