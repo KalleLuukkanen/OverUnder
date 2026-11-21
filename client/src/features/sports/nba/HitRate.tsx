@@ -7,6 +7,7 @@ import { LIMITS, readLimit, readLine, readSide, withBet } from "../../../utils/b
 import { STATS } from "./hitRateStats";
 import HitRateResult from "./HitRateResult";
 import HitRateSplits from "./HitRateSplits";
+import TeammateSplits from "./TeammateSplits";
 import AddToParlay from "../../parlays/AddToParlay";
 import useWatchlist from "../../watchlist/useWatchlist";
 import BetValue from "../../props/BetValue";
@@ -14,6 +15,7 @@ import OddsField from "../../props/OddsField";
 import { parseOdds, readOdds } from "../../../utils/odds";
 import WatchPicks from "../../watchlist/WatchPicks";
 import WatchStar from "../../watchlist/WatchStar";
+import useStableSetSearchParams from "../../../utils/useStableSetSearchParams";
 
 // prop checker of a game page: pick either team's player, a stat and a line
 // the checked prop goes to the url (?team=...&player=...&stat=...) and is checked again when the page opens,
@@ -23,7 +25,9 @@ function HitRate({ team1_id, team2_id }: { team1_id: number, team2_id?: number }
 
     const watch = useWatchlist();
 
-    const [searchParams, setSearchParams] = useSearchParams();
+    const [searchParams] = useSearchParams();
+    // stable: the url's bet is restored once, not again after every url change
+    const setSearchParams = useStableSetSearchParams();
     // the url as the page opened, read once; its team must be one of the game's
     const [initialParams] = useState(() => new URLSearchParams(searchParams));
     const urlTeam = Number(initialParams.get("team"));
@@ -281,6 +285,7 @@ function HitRate({ team1_id, team2_id }: { team1_id: number, team2_id?: number }
                         <HitRateResult result={result}>
                             <BetValue hit_rate={result.hit_rate} games={result.games} odds={parseOdds(odds)} />
                             <HitRateSplits player_id={resultPlayer} result={result} opponent_id={opponent?.id} />
+                            <TeammateSplits player_id={resultPlayer} result={result} />
                             <AddToParlay leg={{ player_id: resultPlayer, stat: result.stat, line: result.line, side: result.side, odds: parseOdds(odds) }} />
                         </HitRateResult>
                     }

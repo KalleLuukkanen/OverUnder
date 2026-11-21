@@ -14,6 +14,7 @@ import OddsField from "../../props/OddsField";
 import { parseOdds, readOdds } from "../../../utils/odds";
 import WatchPicks from "../../watchlist/WatchPicks";
 import WatchStar from "../../watchlist/WatchStar";
+import useStableSetSearchParams from "../../../utils/useStableSetSearchParams";
 
 // shared look of the form controls
 const control = "bg-zinc-800 border border-zinc-700 rounded-md px-2 py-1.5 text-zinc-100 focus:outline-none focus:border-sky-500";
@@ -119,7 +120,9 @@ function NBATeamPropChecker() {
 
     const watch = useWatchlist();
 
-    const [searchParams, setSearchParams] = useSearchParams();
+    const [searchParams] = useSearchParams();
+    // stable: the url's bet is restored once, not again after every url change
+    const setSearchParams = useStableSetSearchParams();
     // the url as the page opened, read once
     const [initialParams] = useState(() => new URLSearchParams(searchParams));
 

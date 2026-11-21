@@ -1,5 +1,5 @@
 import { get, post } from "../apiClient";
-import type { NbaBoxScore, NbaHitRate, NbaHitRateSplits, NbaSeasonAverages, NbaSide, NbaStat } from "../../types/nba";
+import type { NbaBoxScore, NbaHitRate, NbaHitRateSplits, NbaTeammateSplits, NbaSeasonAverages, NbaSide, NbaStat } from "../../types/nba";
 
 // get player's all games from given season (defaults to current season), latest first
 const getPlayersGames = (playerId: number, season?: string) =>
@@ -43,7 +43,12 @@ const getHitRateSplits = (
 ) =>
     post<NbaHitRateSplits>(`/api/nba/players/${playerId}/hit-rate/splits`, { ...bet, opponent_id: opponentId });
 
+// the prop in games each current teammate (rotation players) missed vs played, this season and last
+const getTeammateSplits = (playerId: number, bet: { stat: NbaStat; line: number; side: NbaSide }) =>
+    post<NbaTeammateSplits>(`/api/nba/players/${playerId}/hit-rate/teammates`, bet);
+
 export {
+    getTeammateSplits,
     getHitRateSplits,
     getPlayersGames,
     getPlayersLastGames,

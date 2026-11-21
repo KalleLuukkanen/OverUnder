@@ -8,6 +8,7 @@ import { X } from "lucide-react";
 import PlayerSearch from "./PlayerSearch";
 import HitRateResult from "./HitRateResult";
 import HitRateSplits from "./HitRateSplits";
+import TeammateSplits from "./TeammateSplits";
 import AddToParlay from "../../parlays/AddToParlay";
 import { STATS } from "./hitRateStats";
 import { gameDateTime } from "../../../utils/nbaGame";
@@ -18,6 +19,7 @@ import OddsField from "../../props/OddsField";
 import { parseOdds, readOdds } from "../../../utils/odds";
 import WatchPicks from "../../watchlist/WatchPicks";
 import WatchStar from "../../watchlist/WatchStar";
+import useStableSetSearchParams from "../../../utils/useStableSetSearchParams";
 
 // shared look of the form controls
 const control = "bg-zinc-800 border border-zinc-700 rounded-md px-2 py-1.5 text-zinc-100 focus:outline-none focus:border-sky-500";
@@ -30,7 +32,9 @@ function NBAPlayerPropChecker() {
 
     const watch = useWatchlist();
 
-    const [searchParams, setSearchParams] = useSearchParams();
+    const [searchParams] = useSearchParams();
+    // stable: the url's bet is restored once, not again after every url change
+    const setSearchParams = useStableSetSearchParams();
     // the url as the page opened, read once
     const [initialParams] = useState(() => new URLSearchParams(searchParams));
 
@@ -265,6 +269,7 @@ function NBAPlayerPropChecker() {
                     <HitRateResult result={result}>
                         <BetValue hit_rate={result.hit_rate} games={result.games} odds={parseOdds(odds)} />
                         <HitRateSplits player_id={player.id} result={result} opponent_id={nextOpponent?.id} />
+                        <TeammateSplits player_id={player.id} result={result} />
                         <AddToParlay leg={{ player_id: player.id, stat: result.stat, line: result.line, side: result.side, odds: parseOdds(odds) }} />
                     </HitRateResult> :
                     !errorMessage &&

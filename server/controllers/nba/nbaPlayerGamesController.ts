@@ -133,7 +133,22 @@ const getHitRateSplits = async (req: Request, res: Response) => {
     return res.status(200).json(splits);
 };
 
+// the prop in games each current teammate missed vs played, body: { stat, line, side }
+const getTeammateSplits = async (req: Request, res: Response) => {
+    const player_id = Number(req.params.playerId);
+    if (!Number.isInteger(player_id)) {
+        return res.status(400).json({ error: "Missing or invalid player id" });
+    }
+    const prop = readProp(req.body);
+    if ("error" in prop) {
+        return res.status(400).json({ error: prop.error });
+    }
+    const splits = await nbaPlayerGamesRepository.getTeammateSplits(player_id, prop.stat, prop.line, prop.side);
+    return res.status(200).json(splits);
+};
+
 export {
+    getTeammateSplits,
     getPlayersGames,
     getPlayersLastGames,
     getPlayersLastGamesVsOpponent,

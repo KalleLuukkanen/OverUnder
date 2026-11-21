@@ -187,6 +187,23 @@ export type NbaHitRateSplits = {
     splits: NbaHitRateSplit[];
 };
 
+// a prop in the games a teammate missed vs played (hits, hit rate and average of each)
+export type NbaTeammateSample = Omit<NbaHitRateSplit, "key" | "label">;
+
+export type NbaTeammateSplits = {
+    stat: NbaStat;
+    line: number;
+    side: NbaSide;
+    seasons: string[];   // last season and this one
+    teammates: {
+        id: number;
+        name: string;
+        minutes: number;               // his minutes a game for the team
+        without: NbaTeammateSample;
+        with: NbaTeammateSample;
+    }[];
+};
+
 // per game averages over a season or a whole career, percentages are null without attempts
 export type NbaAverages = {
     games: number;
